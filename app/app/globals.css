@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-blue: #729FAD;
+  --primary-hover: #5d8795;
+  --bg-gradient: linear-gradient(135deg, #f0f4f8 0%, #e2eaf1 50%, #d5e2ed 100%);
+}
+
+body {
+  background: var(--bg-gradient);
+  min-height: 100vh;
+}
