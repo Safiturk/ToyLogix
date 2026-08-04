@@ -1,786 +1,545 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import BarcodeScanner from '../components/BarcodeScanner';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 
-interface Produs {
-  id?: number;
+interface Product {
+  id: number;
   cod_bara: string;
   nume_produs: string;
   categorie: string;
-  brand: string;
-  varsta_recomandata: string;
-  gen: string;
-  material: string;
-  pret_retail: number;
+  descriere: string;
   pret_engros: number;
+  pret_retail: number;
   bucati_per_cutie: number;
   stoc_actual: number;
   stoc_critic: number;
-  imagini?: string[];
-  descriere?: string;
+  imagini: string[];
 }
 
-interface Utilizator {
-  id: number;
-  nume_complet: string;
+interface AppUser {
+  id: string;
+  nume: string;
   email: string;
   telefon: string;
-  nume_firma?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  rol: 'user' | 'admin';
+  firma: string;
+  rol: 'ADMIN' | 'USER';
 }
 
-const DEFAULT_CATEGORIES = ['Bebelusi', 'Masini', 'Jocuri de Societate', 'Papusi', 'Puzzle', 'Seturi de Constructie', 'Carti'];
-
-export default function AdminDashboard() {
+export default function AdminPage() {
   const router = useRouter();
-  const [produse, setProduse] = useState<Produs[]>([]);
-  const [users, setUsers] = useState<Utilizator[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [showScanner, setShowScanner] = useState(false);
-  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const readerControlsRef = useRef<any>(null);
 
-  // Kullanıcı tablosunun açık/kapalı olma durumu (Accordion)
-  const [isUserTableOpen, setIsUserTableOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
 
-  const [imageUrlInput, setImageUrlInput] = useState('');
+  // Kayıtlı Kullanıcılar Tablosu State'leri ve Açılır/Kapanır Modu
+  const [showUsersSection, setShowUsersSection] = useState(true);
+  const [users, setUsers] = useState<AppUser[]>([
+    {
+      id: '1',
+      nume: 'Mehmet Safi Turk',
+      email: 'romehmetsafi@gmail.com',
+      telefon: '0774620997',
+      firma: 'SAFIRO',
+      rol: 'ADMIN',
+    },
+    {
+      id: '2',
+      nume: 'Eminescu Mihai',
+      email: 'srkzeem@gmail.com',
+      telefon: '0753249250',
+      firma: 'SRKZEEM TOY',
+      rol: 'USER',
+    },
+    {
+      id: '3',
+      nume: 'System Admin',
+      email: 'admin@toylogix.com',
+      telefon: '0700000000',
+      firma: 'Client Direct',
+      rol: 'USER',
+    },
+  ]);
 
-  const initialFormState: Produs = {
-    cod_bara: '',
-    nume_produs: '',
-    categorie: 'Masini',
-    brand: '',
-    varsta_recomandata: '3-6 ani',
-    gen: 'Unisex',
-    material: 'Plastic',
-    pret_retail: 0,
-    pret_engros: 0,
-    bucati_per_cutie: 1,
-    stoc_actual: 0,
-    stoc_critic: 10,
-    imagini: [],
-    descriere: '',
-  };
-
-  const [form, setForm] = useState<Produs>(initialFormState);
+  // Form State'leri
+  const [codBara, setCodBara] = useState('');
+  const [numeProdus, setNumeProdus] = useState('');
+  const [categorie, setCategorie] = useState('');
+  const [descriere, setDescriere] = useState('');
+  const [pretEngros, setPretEngros] = useState('');
+  const [pretRetail, setPretRetail] = useState('');
+  const [bucatiPerCutie, setBucatiPerCutie] = useState('1');
+  const [stocActual, setStocActual] = useState('0');
+  const [stocCritic, setStocCritic] = useState('10');
+  const [imageUrl, setImageUrl] = useState('');
 
   useEffect(() => {
-    const auth = localStorage.getItem('admin_authenticated');
-    const session = localStorage.getItem('user_session');
+    fetchProducts();
+    fetchUsers();
+  }, []);
 
-    if (session) {
+  // Supabase'den kullanıcıları çekme (TypeScript Tip Düzeltmesi Yapıldı)
+  const fetchUsers = async () => {
+    const { data, error } = await supabase.from('profiluri').select('*');
+    if (!error && data && data.length > 0) {
+      const formattedUsers: AppUser[] = data.map((u: any) => ({
+        id: u.id,
+        nume: u.nume_complet || u.nume || 'Utilizator',
+        email: u.email || '—',
+        telefon: u.telefon || '—',
+        firma: u.nume_firma || u.firma || 'Client Direct',
+        rol: (u.rol === 'admin' || u.rol === 'ADMIN' ? 'ADMIN' : 'USER') as 'ADMIN' | 'USER',
+      }));
+      setUsers(formattedUsers);
+    }
+  };
+
+  // Kullanıcı Rolünü Değiştirme
+  const toggleUserRole = async (userId: string, currentRole: 'ADMIN' | 'USER') => {
+    const newRole: 'ADMIN' | 'USER' = currentRole === 'ADMIN' ? 'USER' : 'ADMIN';
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, rol: newRole } : u))
+    );
+    await supabase.from('profiluri').update({ rol: newRole.toLowerCase() }).eq('id', userId);
+  };
+
+  // Kullanıcıyı Silme
+  const deleteUser = async (userId: string) => {
+    if (confirm('Sigur doriți să ștergeți acest utilizator?')) {
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      await supabase.from('profiluri').delete().eq('id', userId);
+    }
+  };
+
+  const stopCamera = () => {
+    if (readerControlsRef.current) {
       try {
-        setCurrentUser(JSON.parse(session));
+        readerControlsRef.current.stop();
       } catch (e) {
         console.error(e);
       }
+      readerControlsRef.current = null;
     }
 
-    if (auth !== 'true') {
-      router.push('/login');
-    } else {
-      fetchProduse();
-      fetchUsers();
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
     }
-  }, []);
 
-  const fetchProduse = async () => {
+    setShowCamera(false);
+  };
+
+  const startCamera = () => {
+    setShowCamera(true);
+    setTimeout(async () => {
+      if (videoRef.current) {
+        try {
+          const codeReader = new BrowserMultiFormatReader();
+          const controls = await codeReader.decodeFromVideoDevice(
+            undefined,
+            videoRef.current,
+            (result) => {
+              if (result) {
+                const barcode = result.getText().trim();
+                stopCamera();
+                handleScannedBarcode(barcode);
+              }
+            }
+          );
+          readerControlsRef.current = controls;
+        } catch (err) {
+          console.error("Camera error:", err);
+        }
+      }
+    }, 250);
+  };
+
+  const fetchProducts = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('produse')
       .select('*')
-      .order('id', { ascending: false });
+      .order('created_at', { ascending: false });
 
-    if (error) console.error(error);
-    else setProduse(data || []);
-  };
-
-  const fetchUsers = async () => {
-    const { data } = await supabase
-      .from('utilizatori')
-      .select('*')
-      .order('id', { ascending: false });
-    if (data) setUsers(data);
-  };
-
-  const handleUpdateUserStatus = async (id: number, status: 'approved' | 'rejected') => {
-    const { error } = await supabase.from('utilizatori').update({ status }).eq('id', id);
-    if (!error) {
-      alert(`Utilizatorul a fost ${status === 'approved' ? 'Aprobat' : 'Respins'}!`);
-      fetchUsers();
-    }
-  };
-
-  const handleDeleteUser = async (id: number, email: string) => {
-    if (currentUser && currentUser.email === email) {
-      alert('Nu vă puteți șterge propriul cont de administrator!');
-      return;
-    }
-
-    if (confirm(`Sunteți sigur că doriți să ștergeți utilizatorul ${email}?`)) {
-      const { error } = await supabase.from('utilizatori').delete().eq('id', id);
-      if (error) alert('Eroare la ștergere: ' + error.message);
-      else {
-        alert('Utilizator șters cu succes!');
-        fetchUsers();
-      }
-    }
-  };
-
-  const handleToggleRole = async (user: Utilizator) => {
-    if (currentUser && currentUser.email === user.email) {
-      alert('Nu vă puteți schimba propriul rol!');
-      return;
-    }
-
-    const newRole = user.rol === 'admin' ? 'user' : 'admin';
-    const { error } = await supabase.from('utilizatori').update({ rol: newRole }).eq('id', user.id);
-    if (!error) {
-      alert(`Rolul utilizatorului a fost schimbat în: ${newRole.toUpperCase()}`);
-      fetchUsers();
-    }
-  };
-
-  const addImageUrl = () => {
-    if (imageUrlInput.trim()) {
-      setForm((prev) => ({
-        ...prev,
-        imagini: [...(prev.imagini || []), imageUrlInput.trim()],
+    if (!error && data) {
+      const formatted = data.map((p: any) => ({
+        ...p,
+        imagini: Array.isArray(p.imagini)
+          ? p.imagini
+          : typeof p.imagini === 'string' && p.imagini.startsWith('[')
+          ? JSON.parse(p.imagini)
+          : p.imagini
+          ? [p.imagini]
+          : [],
       }));
-      setImageUrlInput('');
-    }
-  };
-
-  const handleLocalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          setForm((prev) => ({
-            ...prev,
-            imagini: [...(prev.imagini || []), reader.result as string],
-          }));
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removeImageFromForm = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      imagini: prev.imagini?.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleEdit = (p: Produs) => {
-    setEditingId(p.id || null);
-    setForm({
-      ...p,
-      imagini: p.imagini || [],
-      descriere: p.descriere || '',
-    });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setForm(initialFormState);
-    setIsCustomCategory(false);
-  };
-
-  const handleDelete = async (id: number) => {
-    if (confirm('Sunteți sigur că doriți să ștergeți acest produs?')) {
-      const { error } = await supabase.from('produse').delete().eq('id', id);
-      if (error) alert('Eroare la ștergere: ' + error.message);
-      else {
-        alert('Produs șters cu succes!');
-        fetchProduse();
-      }
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    if (editingId) {
-      const { error } = await supabase.from('produse').update(form).eq('id', editingId);
-      if (error) alert('Eroare la actualizare: ' + error.message);
-      else {
-        alert('Produs actualizat cu succes!');
-        setEditingId(null);
-        setForm(initialFormState);
-        fetchProduse();
-      }
-    } else {
-      const { error } = await supabase.from('produse').insert([form]);
-      if (error) alert('Eroare la salvare: ' + error.message);
-      else {
-        alert('Produs salvat cu succes!');
-        setForm(initialFormState);
-        fetchProduse();
-      }
+      setProducts(formatted as Product[]);
     }
     setLoading(false);
   };
 
-  const exportToCSV = () => {
-    if (produse.length === 0) return;
-    const headers = ['ID,Cod Bare,Nume Produs,Categorie,Brand,Pret Recomandat,Pret Engros B2B,Stoc Actual\n'];
-    const rows = produse.map(
-      (p) => `${p.id},"${p.cod_bara}","${p.nume_produs}","${p.categorie}","${p.brand}",${p.pret_retail},${p.pret_engros},${p.stoc_actual}`
-    );
-    const blob = new Blob([headers.concat(rows.join('\n')).join('')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'Inventar_ToyLogix.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleScannedBarcode = (barcode: string) => {
+    const cleanBarcode = barcode.trim();
+    const found = products.find((p) => p.cod_bara?.trim() === cleanBarcode);
+
+    if (found) {
+      startEditing(found);
+    } else {
+      alert(`Produsul cu codul ${cleanBarcode} nu există în baza de date!`);
+      clearForm();
+      setCodBara(cleanBarcode);
+    }
   };
 
-  const existingCategories = Array.from(new Set(produse.map((p) => p.categorie).filter(Boolean)));
-  const allCategoryOptions = Array.from(new Set([...DEFAULT_CATEGORIES, ...existingCategories]));
+  const startEditing = (product: Product) => {
+    setEditingProduct(product);
+    setCodBara(product.cod_bara || '');
+    setNumeProdus(product.nume_produs || '');
+    setCategorie(product.categorie || '');
+    setDescriere(product.descriere || '');
+    setPretEngros(product.pret_engros?.toString() || '');
+    setPretRetail(product.pret_retail?.toString() || '');
+    setBucatiPerCutie(product.bucati_per_cutie?.toString() || '1');
+    setStocActual(product.stoc_actual?.toString() || '0');
+    setStocCritic(product.stoc_critic?.toString() || '10');
+    setImageUrl(product.imagini && product.imagini[0] ? product.imagini[0] : '');
+  };
 
-  const pendingUsers = users.filter((u) => u.status === 'pending');
-  const approvedUsers = users.filter((u) => u.status === 'approved');
-  const criticalStockProducts = produse.filter((p) => p.stoc_actual <= p.stoc_critic);
-  const totalStockItems = produse.reduce((sum, p) => sum + Number(p.stoc_actual || 0), 0);
-  const totalRetailValue = produse.reduce((sum, p) => sum + Number(p.stoc_actual || 0) * Number(p.pret_retail || 0), 0);
-  const totalEngrosValue = produse.reduce((sum, p) => sum + Number(p.stoc_actual || 0) * Number(p.pret_engros || 0), 0);
+  const clearForm = () => {
+    setEditingProduct(null);
+    setCodBara('');
+    setNumeProdus('');
+    setCategorie('');
+    setDescriere('');
+    setPretEngros('');
+    setPretRrp('');
+    setPretRetail('');
+    setBucatiPerCutie('1');
+    setStocActual('0');
+    setStocCritic('10');
+    setImageUrl('');
+  };
 
-  const formatRON = (amount: number) => {
-    return new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount);
+  const setPretRrp = (val: string) => {
+    setPretRetail(val);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const payload = {
+      cod_bara: codBara,
+      nume_produs: numeProdus,
+      categorie: categorie,
+      descriere: descriere,
+      pret_engros: parseFloat(pretEngros) || 0,
+      pret_retail: parseFloat(pretRetail) || 0,
+      bucati_per_cutie: parseInt(bucatiPerCutie) || 1,
+      stoc_actual: parseInt(stocActual) || 0,
+      stoc_critic: parseInt(stocCritic) || 10,
+      imagini: imageUrl ? [imageUrl] : [],
+    };
+
+    if (editingProduct) {
+      const { error } = await supabase.from('produse').update(payload).eq('id', editingProduct.id);
+      if (!error) {
+        alert('Produs actualizat cu succes!');
+        clearForm();
+        fetchProducts();
+      } else {
+        alert('Eroare: ' + error.message);
+      }
+    } else {
+      const { error } = await supabase.from('produse').insert([payload]);
+      if (!error) {
+        alert('Produs adăugat cu succes!');
+        clearForm();
+        fetchProducts();
+      } else {
+        alert('Eroare: ' + error.message);
+      }
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (confirm('Sigur doriți să ștergeți acest produs?')) {
+      const { error } = await supabase.from('produse').delete().eq('id', id);
+      if (!error) fetchProducts();
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-indigo-50/20 to-purple-50/20 p-4 md:p-8 text-slate-800">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-100 p-6 font-sans">
+      <div className="max-w-6xl mx-auto space-y-6">
         
-        {/* HEADER */}
-        <header className="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <Link href="/store" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-black text-2xl shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform">
-              T
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">Panou de Administrare</h1>
-              <p className="text-xs text-slate-500 font-medium">ToyLogix Store &bull; Click logo pentru a reveni la Magazin</p>
-            </div>
-          </Link>
-
-          <div className="flex gap-2">
-            <button
-              onClick={exportToCSV}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
-            >
-              📊 Raport Excel
-            </button>
-            <Link href="/store" className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm">
-              Magazin
-            </Link>
-            <button
-              onClick={() => {
-                localStorage.clear();
-                router.push('/login');
-              }}
-              className="px-3.5 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition border border-rose-200/60"
-            >
-              Ieșire Admin
-            </button>
+        {/* Header */}
+        <div className="flex items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <div>
+            <h1 className="text-2xl font-black text-slate-800">Admin Dashboard - Depozit</h1>
+            <p className="text-xs text-slate-400 font-medium">Gestionare produse, stocuri și scanare barkod</p>
           </div>
-        </header>
-
-        {/* İSTATİSTİK KARTLARI */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Produse</span>
-            <div className="text-2xl font-black text-slate-900">{produse.length} tipuri</div>
-          </div>
-          
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bucăți în Stoc</span>
-            <div className="text-2xl font-black text-indigo-600">{formatRON(totalStockItems)} buc</div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Valoare Inventar (B2B)</span>
-            <div className="text-2xl font-black text-emerald-600">{formatRON(totalEngrosValue)} RON</div>
-            <span className="text-[10px] text-slate-400 block font-medium">
-              Valoare RRP: {formatRON(totalRetailValue)} RON
-            </span>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stoc Critic</span>
-            <div className={`text-2xl font-black ${criticalStockProducts.length > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-              {criticalStockProducts.length} produse
-            </div>
-          </div>
-        </section>
-
-        {/* ONAY BEKLEYEN KULLANICILAR */}
-        {pendingUsers.length > 0 && (
-          <section className="bg-amber-50/80 border border-amber-200 p-6 rounded-3xl shadow-sm space-y-4">
-            <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2">
-              ⏳ Solicitări Înregistrare Noi ({pendingUsers.length})
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs bg-white rounded-2xl overflow-hidden shadow-sm">
-                <thead>
-                  <tr className="border-b bg-amber-100/50 font-bold text-amber-900">
-                    <th className="p-3">Nume</th>
-                    <th className="p-3">Telefon</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Firma</th>
-                    <th className="p-3">Acțiuni</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {pendingUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50">
-                      <td className="p-3 font-bold">{u.nume_complet}</td>
-                      <td className="p-3 font-mono">{u.telefon}</td>
-                      <td className="p-3">{u.email}</td>
-                      <td className="p-3">{u.nume_firma || '-'}</td>
-                      <td className="p-3 flex gap-2">
-                        <button
-                          onClick={() => handleUpdateUserStatus(u.id, 'approved')}
-                          className="px-3 py-1 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition"
-                        >
-                          ✓ Aprobă
-                        </button>
-                        <button
-                          onClick={() => handleUpdateUserStatus(u.id, 'rejected')}
-                          className="px-3 py-1 bg-rose-600 text-white rounded-lg font-bold hover:bg-rose-700 transition"
-                        >
-                          ✕ Respinge
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
-
-        {/* AÇILIR / KAPANIR KAYITLI KULLANICILAR TABLOSU (ACCORDION) */}
-        <section className="bg-white/80 backdrop-blur-md rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden transition-all duration-300">
-          
-          {/* Başlık Barı (Tıklanınca Açılır/Kapanır) */}
-          <div
-            onClick={() => setIsUserTableOpen(!isUserTableOpen)}
-            className="p-6 flex justify-between items-center cursor-pointer hover:bg-slate-50/50 transition-colors select-none"
+          <button
+            onClick={() => { stopCamera(); router.push('/store'); }}
+            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-xl">👥</span>
-              <h2 className="text-xl font-bold text-slate-800">
-                Utilizatori Înregistrați <span className="text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-xl font-extrabold ml-1">({approvedUsers.length})</span>
-              </h2>
+            ← Înapoi la Magazin
+          </button>
+        </div>
+
+        {/* UTILIZATORI ÎNREGISTRAȚI */}
+        <div className="bg-slate-200/80 p-6 rounded-3xl shadow-sm border border-slate-300/60">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-indigo-900 text-lg">👥</span>
+              <h2 className="text-lg font-black text-slate-900">Utilizatori Înregistrați</h2>
+              <span className="ml-1 px-2.5 py-0.5 bg-indigo-100 text-indigo-700 font-extrabold text-xs rounded-full">
+                {users.length}
+              </span>
             </div>
 
-            {/* Sağ Üst Ok İkonu (Dönme animasyonlu) */}
-            <button className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-base transition-transform duration-300">
-              <span className={`transition-transform duration-300 ${isUserTableOpen ? 'rotate-180' : 'rotate-0'}`}>
-                ▼
-              </span>
+            <button
+              onClick={() => setShowUsersSection(!showUsersSection)}
+              className="w-8 h-8 bg-white text-slate-700 rounded-full flex items-center justify-center font-bold shadow-sm hover:bg-slate-50 transition"
+            >
+              {showUsersSection ? '▲' : '▼'}
             </button>
           </div>
 
-          {/* İçerik (Sadece isUserTableOpen true olduğunda yumuşakça görünür) */}
-          {isUserTableOpen && (
-            <div className="px-6 pb-6 pt-0 border-t border-slate-100 animate-fadeIn">
-              <div className="overflow-x-auto pt-4">
+          {showUsersSection && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+              <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b bg-slate-50 font-bold text-slate-600">
-                      <th className="p-3">Nume & Prenume</th>
-                      <th className="p-3">Contact</th>
-                      <th className="p-3">Firma</th>
-                      <th className="p-3">Rol</th>
-                      <th className="p-3">Acțiuni</th>
+                    <tr className="border-b border-slate-200 bg-slate-50/50 text-slate-500 font-extrabold text-[11px]">
+                      <th className="p-4">Nume & Prenume</th>
+                      <th className="p-4">Contact</th>
+                      <th className="p-4">Firma</th>
+                      <th className="p-4">Rol</th>
+                      <th className="p-4 text-right">Acțiuni</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
-                    {approvedUsers.map((u) => {
-                      const isSelf = currentUser && currentUser.email === u.email;
-                      return (
-                        <tr key={u.id} className="hover:bg-slate-50">
-                          <td className="p-3 font-bold text-slate-900">{u.nume_complet}</td>
-                          <td className="p-3">
-                            <div>{u.email}</div>
-                            <div className="text-slate-400 font-mono text-[11px]">{u.telefon}</div>
-                          </td>
-                          <td className="p-3 font-medium text-slate-600">{u.nume_firma || 'Client Direct'}</td>
-                          <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
-                              u.rol === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                            }`}>
-                              {u.rol.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="p-3 flex gap-2">
-                            <button
-                              disabled={isSelf}
-                              onClick={() => handleToggleRole(u)}
-                              className={`px-2.5 py-1 rounded-lg font-bold transition text-[11px] ${
-                                isSelf
-                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
-                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                              }`}
-                            >
-                              {u.rol === 'admin' ? 'Schimbă în User' : 'Schimbă în Admin'}
-                            </button>
-                            <button
-                              disabled={isSelf}
-                              onClick={() => handleDeleteUser(u.id, u.email)}
-                              className={`px-2.5 py-1 rounded-lg font-bold transition text-[11px] ${
-                                isSelf
-                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
-                                  : 'bg-rose-100 hover:bg-rose-200 text-rose-700'
-                              }`}
-                            >
-                              Șterge ✕
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                  <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                    {users.map((u) => (
+                      <tr key={u.id} className="hover:bg-slate-50/80 transition">
+                        <td className="p-4 font-black text-slate-900">{u.nume}</td>
+                        <td className="p-4">
+                          <div className="font-bold text-slate-800">{u.email}</div>
+                          <div className="text-[10px] text-slate-400 font-semibold">{u.telefon}</div>
+                        </td>
+                        <td className="p-4 font-bold text-slate-600">{u.firma}</td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                              u.rol === 'ADMIN'
+                                ? 'bg-purple-100 text-purple-700'
+                                : 'bg-blue-100 text-blue-600'
+                            }`}
+                          >
+                            {u.rol}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          <button
+                            onClick={() => toggleUserRole(u.id, u.rol)}
+                            disabled={u.rol === 'ADMIN' && u.nume.includes('Mehmet')}
+                            className={`px-3 py-1.5 font-bold text-[11px] rounded-full transition shadow-sm ${
+                              u.rol === 'ADMIN' && u.nume.includes('Mehmet')
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            }`}
+                          >
+                            {u.rol === 'ADMIN' ? 'Schimbă în User' : 'Schimbă în Admin'}
+                          </button>
+
+                          <button
+                            onClick={() => deleteUser(u.id)}
+                            disabled={u.rol === 'ADMIN' && u.nume.includes('Mehmet')}
+                            className={`px-3 py-1.5 font-bold text-[11px] rounded-full transition shadow-sm ${
+                              u.rol === 'ADMIN' && u.nume.includes('Mehmet')
+                                ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                : 'bg-rose-100 hover:bg-rose-200 text-rose-600'
+                            }`}
+                          >
+                            Șterge ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
-        </section>
+        </div>
 
-        {/* ÜRÜN EKLEME & DÜZENLEME FORMU */}
-        <section className="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
-          <div className="flex justify-between items-center border-b pb-3">
-            <h2 className="text-xl font-bold text-slate-800">
-              {editingId ? '✏️ Editare Produs Existent' : '➕ Adăugare Produs Nou'}
+        {/* BARKOD SCANNER BAR */}
+        <div className="bg-gradient-to-r from-slate-800 to-indigo-900 p-6 rounded-2xl text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+          <div>
+            <span className="text-[10px] bg-indigo-500/30 text-indigo-200 font-bold px-2.5 py-1 rounded-md uppercase">
+              📷 Scan & Edit
+            </span>
+            <h3 className="text-lg font-bold mt-1">Scanați codul de bare pentru EDITARE</h3>
+            <p className="text-xs text-slate-300">Deschideți camera pentru a edita automat produsul scanat.</p>
+          </div>
+
+          <button
+            onClick={() => (showCamera ? stopCamera() : startCamera())}
+            className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-extrabold text-xs rounded-xl shadow-lg transition active:scale-95 flex items-center gap-2"
+          >
+            📷 {showCamera ? 'Închide Scan' : 'Scan'}
+          </button>
+        </div>
+
+        {/* KAMERA MODAL */}
+        {showCamera && (
+          <div className="bg-white p-6 rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center relative">
+            <button
+              onClick={stopCamera}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold text-lg p-2"
+            >
+              ✕
+            </button>
+            <h4 className="text-sm font-bold text-slate-800 mb-2">Apropiați codul de bare de cameră</h4>
+            <video ref={videoRef} className="w-full max-w-md rounded-xl border bg-black h-64 object-cover" />
+          </div>
+        )}
+
+        {/* FORM */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-base font-black text-slate-800">
+              {editingProduct ? '✏️ Editează Produs' : '➕ Adaugă Produs Nou'}
             </h2>
-            {editingId && (
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="px-3 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-300 transition"
-              >
+            {editingProduct && (
+              <button onClick={clearForm} className="text-xs font-bold text-rose-600 hover:underline">
                 Anulează Editarea
               </button>
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-bold mb-1">Cod Bare (Barcode)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    required
-                    value={form.cod_bara}
-                    onChange={(e) => setForm({ ...form, cod_bara: e.target.value })}
-                    className="flex-1 p-2.5 border rounded-xl font-mono text-xs outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowScanner(true)}
-                    className="px-3 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition flex items-center gap-1 shadow-sm"
-                  >
-                    📷 Scan
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold mb-1">Nume Produs</label>
-                <input
-                  type="text"
-                  required
-                  value={form.nume_produs}
-                  onChange={(e) => setForm({ ...form, nume_produs: e.target.value })}
-                  className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold mb-1">Categorie</label>
-                {!isCustomCategory ? (
-                  <div className="flex gap-2">
-                    <select
-                      value={form.categorie}
-                      onChange={(e) => {
-                        if (e.target.value === '__NEW__') {
-                          setIsCustomCategory(true);
-                          setForm({ ...form, categorie: '' });
-                        } else {
-                          setForm({ ...form, categorie: e.target.value });
-                        }
-                      }}
-                      className="flex-1 p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-medium"
-                    >
-                      {allCategoryOptions.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                      <option value="__NEW__">➕ Categorie Nouă (Yeni Ekle...)</option>
-                    </select>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Nume categorie nouă..."
-                      required
-                      value={form.categorie}
-                      onChange={(e) => setForm({ ...form, categorie: e.target.value })}
-                      className="flex-1 p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-amber-50"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomCategory(false);
-                        setForm({ ...form, categorie: allCategoryOptions[0] || 'Masini' });
-                      }}
-                      className="px-3 py-1 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-300"
-                    >
-                      Anulează
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* RESİM YÜKLEME ALANI */}
-            <div className="border-t pt-4 space-y-3 bg-slate-50/70 p-4 rounded-2xl border border-slate-200">
-              <label className="block text-xs font-bold text-slate-800">
-                Imagini Produs (URL sau fișiere din calculator)
-              </label>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <span className="text-[11px] text-slate-500 font-medium">Varianta A: Link URL Imagine</span>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={imageUrlInput}
-                      onChange={(e) => setImageUrlInput(e.target.value)}
-                      placeholder="https://site.com/imagine.jpg"
-                      className="flex-1 p-2 border bg-white rounded-lg text-xs outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={addImageUrl}
-                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition"
-                    >
-                      + Link
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <span className="text-[11px] text-slate-500 font-medium">Varianta B: Încarcă din Calculator</span>
-                  <label className="block">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleLocalFileUpload}
-                      className="block w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {form.imagini && form.imagini.length > 0 && (
-                <div className="pt-2">
-                  <span className="text-[11px] font-bold text-slate-600 block mb-1">
-                    Imagini atașate ({form.imagini.length}):
-                  </span>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {form.imagini.map((img, idx) => (
-                      <div key={idx} className="relative w-20 h-20 border rounded-lg overflow-hidden group bg-white shadow-sm flex-shrink-0">
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeImageFromForm(idx)}
-                          className="absolute inset-0 bg-rose-600/80 text-white font-bold text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                        >
-                          Șterge ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+          <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Cod Bare (Barcode)</label>
+              <input type="text" value={codBara} onChange={(e) => setCodBara(e.target.value)} required className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
             </div>
 
             <div>
-              <label className="block text-xs font-bold mb-1">Descriere Produs (Açıklama)</label>
-              <textarea
-                rows={3}
-                value={form.descriere || ''}
-                onChange={(e) => setForm({ ...form, descriere: e.target.value })}
-                placeholder="Detalii despre produs..."
-                className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Nume Produs</label>
+              <input type="text" value={numeProdus} onChange={(e) => setNumeProdus(e.target.value)} required className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t pt-4">
-              <div>
-                <label className="block text-xs font-bold text-indigo-700 mb-1">
-                  Preț En-Gros (B2B Toptan Fiyat)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={form.pret_engros || ''}
-                  onChange={(e) => setForm({ ...form, pret_engros: parseFloat(e.target.value) || 0 })}
-                  className="w-full p-2.5 border rounded-xl text-xs outline-none font-bold bg-indigo-50/60 border-indigo-200"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Preț Vânzare Recomandat (RRP)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={form.pret_retail || ''}
-                  onChange={(e) => setForm({ ...form, pret_retail: parseFloat(e.target.value) || 0 })}
-                  className="w-full p-2.5 border rounded-xl text-xs outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold mb-1">Bucăți / Cutie</label>
-                <input
-                  type="number"
-                  value={form.bucati_per_cutie || ''}
-                  onChange={(e) => setForm({ ...form, bucati_per_cutie: parseInt(e.target.value) || 1 })}
-                  className="w-full p-2.5 border rounded-xl text-xs outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold mb-1">Stoc Actual</label>
-                <input
-                  type="number"
-                  value={form.stoc_actual}
-                  onChange={(e) => setForm({ ...form, stoc_actual: parseInt(e.target.value) || 0 })}
-                  className="w-full p-2.5 border rounded-xl text-xs font-bold bg-amber-50 border-amber-300 outline-none"
-                />
-              </div>
+            <div>
+              <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Categorie</label>
+              <input type="text" value={categorie} onChange={(e) => setCategorie(e.target.value)} required className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full py-3.5 text-white font-bold rounded-xl transition text-xs shadow-md ${
-                editingId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'
-              }`}
-            >
-              {loading
-                ? 'Se salvează...'
-                : editingId
-                ? 'Actualizează Produsul (Güncelle)'
-                : 'Salvează Produsul în Sistem'}
-            </button>
+            <div>
+              <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Preț En-Gros (RON)</label>
+              <input type="number" step="0.01" value={pretEngros} onChange={(e) => setPretEngros(e.target.value)} required className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Preț Retail (RRP)</label>
+              <input type="number" step="0.01" value={pretRetail} onChange={(e) => setPretRetail(e.target.value)} className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Bucăți / Cutie</label>
+              <input type="number" value={bucatiPerCutie} onChange={(e) => setBucatiPerCutie(e.target.value)} className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Stoc Actual</label>
+              <input type="number" value={stocActual} onChange={(e) => setStocActual(e.target.value)} className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Stoc Critic</label>
+              <input type="number" value={stocCritic} onChange={(e) => setStocCritic(e.target.value)} className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-extrabold text-slate-700 mb-1">URL Imagine</label>
+              <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
+            </div>
+
+            <div className="md:col-span-3">
+              <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Descriere</label>
+              <textarea value={descriere} onChange={(e) => setDescriere(e.target.value)} rows={2} className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-indigo-600" />
+            </div>
+
+            <div className="md:col-span-3 flex justify-end gap-3 pt-2">
+              <button type="submit" className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition">
+                {editingProduct ? '💾 Salvează Modificările' : '➕ Adaugă Produsul'}
+              </button>
+            </div>
           </form>
-        </section>
+        </div>
 
-        {/* ÜRÜN LİSTESİ TABLOSU */}
-        <section className="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
-          <h2 className="text-xl font-bold text-slate-800">Inventar Produse ({produse.length})</h2>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b bg-slate-50 text-xs font-bold text-slate-600">
-                  <th className="p-3">Imagine</th>
-                  <th className="p-3">Cod Bare</th>
-                  <th className="p-3">Produs</th>
-                  <th className="p-3">Categorie</th>
-                  <th className="p-3">Preț B2B (En-Gros)</th>
-                  <th className="p-3">Preț Recomandat (RRP)</th>
-                  <th className="p-3">Stoc</th>
-                  <th className="p-3">Acțiuni</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y text-xs">
-                {produse.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50">
-                    <td className="p-3">
-                      <div className="w-10 h-10 rounded-lg border overflow-hidden bg-slate-100">
-                        <img
-                          src={
-                            p.imagini && p.imagini.length > 0
-                              ? p.imagini[0]
-                              : 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=100&q=80'
-                          }
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    </td>
-                    <td className="p-3 font-mono">{p.cod_bara}</td>
-                    <td className="p-3 font-bold">{p.nume_produs}</td>
-                    <td className="p-3"><span className="px-2 py-0.5 bg-slate-100 rounded text-[11px]">{p.categorie}</span></td>
-                    <td className="p-3 font-bold text-indigo-600">{p.pret_engros} RON</td>
-                    <td className="p-3 text-slate-500 font-medium">{p.pret_retail} RON</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded font-bold ${
-                        p.stoc_actual <= p.stoc_critic ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
-                      }`}>
-                        {p.stoc_actual} buc
-                      </span>
-                    </td>
-                    <td className="p-3 flex gap-2">
-                      <button
-                        onClick={() => handleEdit(p)}
-                        className="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 font-bold transition"
-                      >
-                        Editează
-                      </button>
-                      <button
-                        onClick={() => p.id && handleDelete(p.id)}
-                        className="px-3 py-1 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 font-bold transition"
-                      >
-                        Șterge
-                      </button>
-                    </td>
+        {/* TABLO */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h2 className="text-base font-black text-slate-800 mb-4">Lista Produse în Depozit</h2>
+          {loading ? (
+            <div className="text-center py-8 text-xs text-slate-400 font-bold">Se încarcă produsele...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b text-slate-400 font-extrabold uppercase text-[10px]">
+                    <th className="p-3">Imagine</th>
+                    <th className="p-3">Cod Bare</th>
+                    <th className="p-3">Nume</th>
+                    <th className="p-3">Categorie</th>
+                    <th className="p-3">Preț En-Gros</th>
+                    <th className="p-3">Stoc / Critic</th>
+                    <th className="p-3 text-right">Acțiuni</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                </thead>
+                <tbody className="divide-y font-semibold text-slate-700">
+                  {products.map((p) => {
+                    const isCritical = p.stoc_actual <= (p.stoc_critic || 10);
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50 transition">
+                        <td className="p-3">
+                          {p.imagini && p.imagini[0] ? (
+                            <img src={p.imagini[0]} alt={p.nume_produs} className="w-10 h-10 object-contain rounded border bg-white" />
+                          ) : (
+                            <span className="text-[10px] text-slate-300">Fără Foto</span>
+                          )}
+                        </td>
+                        <td className="p-3 font-mono font-bold text-slate-800">{p.cod_bara || '—'}</td>
+                        <td className="p-3 font-bold text-slate-900">{p.nume_produs}</td>
+                        <td className="p-3"><span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-bold">{p.categorie}</span></td>
+                        <td className="p-3 font-bold text-indigo-600">{p.pret_engros} RON</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 rounded font-bold text-[10px] ${isCritical ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {p.stoc_actual} buc (Limită: {p.stoc_critic || 10})
+                          </span>
+                        </td>
+                        <td className="p-3 text-right space-x-2">
+                          <button onClick={() => startEditing(p)} className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white font-bold rounded-lg transition">
+                            ✏️ Editează
+                          </button>
+                          <button onClick={() => handleDelete(p.id)} className="px-3 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white font-bold rounded-lg transition">
+                            🗑️ Șterge
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
       </div>
-
-      {showScanner && (
-        <BarcodeScanner
-          onScanSuccess={(scannedCode: string) => {
-            setForm((prev) => ({ ...prev, cod_bara: scannedCode }));
-            setShowScanner(false);
-            alert(`Cod de bare citit: ${scannedCode}`);
-          }}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
     </div>
   );
 }
