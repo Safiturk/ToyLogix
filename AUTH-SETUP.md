@@ -11,6 +11,11 @@ Before deploying:
    redirect URLs for production and local development in Authentication > URL
    Configuration. Keep the default recovery email confirmation URL so Supabase
    validates the token and redirects with a recovery session.
+   Also allow `/email-confirmed` on every registration origin (toylogix.eu,
+   www.toylogix.eu if used, toylogix.netlify.app, and localhost for development).
+   Signup emails now request that destination to display a confirmation result.
+   Email confirmation templates should retain `{{ .ConfirmationURL }}`.
+   Previously sent emails keep their original redirect destinations.
 3. Migrate existing `utilizatori` accounts into Supabase Auth using a trusted
    server-side admin process (invite by verified email, then set a new password).
    Never copy SHA-256 hashes as plaintext passwords or expose service-role keys

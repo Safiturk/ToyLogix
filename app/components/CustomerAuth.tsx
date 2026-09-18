@@ -75,7 +75,7 @@ export default function CustomerAuth({
         // Auth owns the password; the existing table retains the B2B approval profile.
         const { data: account, error: accountError } = await supabase.auth.signUp({
           email: email.trim(), password,
-          options: { emailRedirectTo: `${window.location.origin}/login`, data: {
+          options: { emailRedirectTo: `${window.location.origin}/email-confirmed`, data: {
             nume_complet: name.trim(), telefon: telefon.trim(), nume_firma: company.trim() || null,
           } },
         });
