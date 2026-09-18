@@ -1,4 +1,4 @@
-import CustomerAuth from "../components/CustomerAuth";
+import AccountAccess from "../components/AccountAccess";
 export default function LoginPage() {
-  return <CustomerAuth />;
+  return <AccountAccess mode="login" />;
 }

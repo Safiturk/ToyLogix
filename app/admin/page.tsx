@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import BarcodeScanner from '../components/BarcodeScanner';
+import formStyles from './product-form.module.css';
+import OnlinePanel from './OnlinePanel';
+import wings from './wings.module.css';
 
 interface Produs {
   id?: number;
@@ -57,9 +60,9 @@ export default function AdminDashboard() {
     nume_produs: '',
     categorie: 'Masini',
     brand: '',
-    varsta_recomandata: '3-6 ani',
+    varsta_recomandata: '',
     gen: 'Unisex',
-    material: 'Plastic',
+    material: '',
     pret_retail: 0,
     pret_engros: 0,
     bucati_per_cutie: 1,
@@ -275,7 +278,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-indigo-50/20 to-purple-50/20 p-4 md:p-8 text-slate-800">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className={wings.layout}>
+      <div className={`${wings.center} max-w-6xl mx-auto space-y-8`}>
         
         {/* HEADER */}
         <header className="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -476,11 +480,15 @@ export default function AdminDashboard() {
         </section>
 
         {/* ÜRÜN EKLEME & DÜZENLEME FORMU */}
-        <section className="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
-          <div className="flex justify-between items-center border-b pb-3">
+        <section className={formStyles.card}>
+          <div className={formStyles.heading}>
+            <div>
+            <p className={formStyles.eyebrow}>TOYLOGIX / CATALOG</p>
             <h2 className="text-xl font-bold text-slate-800">
-              {editingId ? '✏️ Editare Produs Existent' : '➕ Adăugare Produs Nou'}
+              {editingId ? 'Editare Produs Existent' : 'Adăugare Produs Nou'}
             </h2>
+            <p className={formStyles.subtitle}>Detalii, imagini și disponibilitate pentru catalogul tău.</p>
+            </div>
             {editingId && (
               <button
                 type="button"
@@ -492,8 +500,9 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <form onSubmit={handleSubmit} className={formStyles.form}>
+            <div className={formStyles.sectionTitle}><span>01</span><h3>Informații produs</h3></div>
+            <div className={formStyles.detailsGrid}>
               <div>
                 <label className="block text-xs font-bold mb-1">Cod Bare (Barcode)</label>
                 <div className="flex gap-2">
@@ -509,7 +518,7 @@ export default function AdminDashboard() {
                     onClick={() => setShowScanner(true)}
                     className="px-3 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition flex items-center gap-1 shadow-sm"
                   >
-                    📷 Scan
+                    Scan
                   </button>
                 </div>
               </div>
@@ -591,11 +600,50 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="product-age" className="block text-xs font-bold mb-1">Vârstă recomandată</label>
+                <input
+                  id="product-age"
+                  name="varsta_recomandata"
+                  type="text"
+                  list="product-age-options"
+                  value={form.varsta_recomandata ?? ''}
+                  onChange={(e) => setForm((current) => ({ ...current, varsta_recomandata: e.target.value }))}
+                  placeholder="Selectează sau scrie intervalul de vârstă"
+                  className="w-full"
+                />
+                <datalist id="product-age-options">
+                  {Array.from(new Set(['0-12 luni', '1-3 ani', '3-6 ani', '6-9 ani', '9-12 ani', '12+ ani', ...produse.map((p) => p.varsta_recomandata?.trim()).filter(Boolean)])).map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+                <p className="mt-2 text-[11px] text-slate-500">Introdu vârsta indicată pe ambalajul produsului.</p>
+              </div>
+              <div>
+                <label htmlFor="product-material" className="block text-xs font-bold mb-1">Material</label>
+                <input
+                  id="product-material"
+                  name="material"
+                  type="text"
+                  list="product-material-options"
+                  value={form.material ?? ''}
+                  onChange={(e) => setForm((current) => ({ ...current, material: e.target.value }))}
+                  placeholder="Selectează sau scrie materialul"
+                  className="w-full"
+                />
+                <datalist id="product-material-options">
+                  {Array.from(new Set(['Plastic', 'Lemn', 'Metal', 'Textil', 'Pluș', 'Carton', 'Silicon', ...produse.map((p) => p.material?.trim()).filter(Boolean)])).map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+                <p className="mt-2 text-[11px] text-slate-500">Poți introduce și o combinație, de exemplu: lemn și metal.</p>
+              </div>
+            </div>
+
             {/* RESİM YÜKLEME ALANI */}
-            <div className="border-t pt-4 space-y-3 bg-slate-50/70 p-4 rounded-2xl border border-slate-200">
-              <label className="block text-xs font-bold text-slate-800">
-                Imagini Produs (URL sau fișiere din calculator)
-              </label>
+            <div className={formStyles.mediaPanel}>
+              <div className={formStyles.sectionTitle}><span>02</span><h3>Imagini produs</h3></div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -666,7 +714,8 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t pt-4">
+            <div className={formStyles.sectionTitle}><span>03</span><h3>Prețuri și stoc</h3></div>
+            <div className={formStyles.pricingGrid}>
               <div>
                 <label className="block text-xs font-bold text-indigo-700 mb-1">
                   Preț En-Gros (B2B Toptan Fiyat)
@@ -715,12 +764,13 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            <div className={formStyles.footer}>
+            <p>Verifică informațiile înainte de salvare.</p>
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3.5 text-white font-bold rounded-xl transition text-xs shadow-md ${
-                editingId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'
-              }`}
+              className={formStyles.saveButton}
+              aria-busy={loading}
             >
               {loading
                 ? 'Se salvează...'
@@ -728,6 +778,7 @@ export default function AdminDashboard() {
                 ? 'Actualizează Produsul (Güncelle)'
                 : 'Salvează Produsul în Sistem'}
             </button>
+            </div>
           </form>
         </section>
 
@@ -798,6 +849,10 @@ export default function AdminDashboard() {
           </div>
         </section>
 
+      </div>
+
+      <div className={wings.left}><OnlinePanel /></div>
+      <div className={wings.right} aria-hidden="true" />
       </div>
 
       {showScanner && (

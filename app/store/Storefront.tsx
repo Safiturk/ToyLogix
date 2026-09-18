@@ -479,20 +479,29 @@ export default function Storefront({
           </div>
           <nav className={s.navigation} aria-label="Navigare principală">
             {user ? (
-              <>
-                <span className={s.userName}>{user.nume_complet}</span>
-                {user.rol === "admin" && <Link href="/admin">Admin Panel</Link>}
+              <div className={s.accountControls}>
+                <div className={s.accountBadge}>
+                  <span className={s.accountAvatar} aria-hidden="true">{(user.nume_complet || "Partener").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("ro")}</span>
+                  <div className={s.accountIdentity}>
+                    <span className={s.userName} title={user.nume_complet}>{user.nume_complet || "Partener"}</span>
+                    <small>{user.rol === "admin" ? "Administrator" : "Partener ToyLogix"}</small>
+                  </div>
+                </div>
+                {user.rol === "admin" && <Link className={`${s.headerAction} ${s.adminAction}`} href="/admin">Admin Panel <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" /></svg></Link>}
                 <button
-                  className={s.secondary}
+                  className={`${s.headerAction} ${s.logoutAction}`}
+                  aria-label="Ieșire din cont"
+                  title="Ieșire din cont"
                   onClick={() => {
                     localStorage.removeItem("user_session");
                     localStorage.removeItem("admin_authenticated");
                     window.dispatchEvent(new Event("toylogix-session"));
                   }}
                 >
-                  Ieșire
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M10 12h11m-4-4 4 4-4 4" /></svg>
+                  <span>Ieșire</span>
                 </button>
-              </>
+              </div>
             ) : (
               <>
                 <Link href="/login">Autentificare</Link>
@@ -718,7 +727,20 @@ export default function Storefront({
                       onClick={() => setSelected(p)}
                       aria-label={`Vezi detalii: ${p.nume_produs}`}
                     >
-                      <div className={s.cardImage}>
+                      <div
+                        className={s.cardImage}
+                        onMouseMove={(event) => {
+                          const bounds = event.currentTarget.getBoundingClientRect();
+                          const x = ((event.clientX - bounds.left) / bounds.width) * 100;
+                          const y = ((event.clientY - bounds.top) / bounds.height) * 100;
+                          event.currentTarget.style.setProperty("--zoom-x", `${x}%`);
+                          event.currentTarget.style.setProperty("--zoom-y", `${y}%`);
+                        }}
+                        onMouseLeave={(event) => {
+                          event.currentTarget.style.setProperty("--zoom-x", "center");
+                          event.currentTarget.style.setProperty("--zoom-y", "center");
+                        }}
+                      >
                         <Picture src={images(p)[0]} name={p.nume_produs} />
                         <span className={s.categoryTag}>
                           {p.categorie || "Jucării"}

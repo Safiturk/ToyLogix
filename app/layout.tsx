@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import LivePresence from './components/LivePresence';
 
 export const metadata: Metadata = {
   title: 'ToyLogix - Sistem',
@@ -19,7 +20,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3081/3081559.png" />
       </head>
-      <body>{children}</body>
+      <body><LivePresence>{children}</LivePresence></body>
     </html>
   );
 }

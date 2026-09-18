@@ -9,6 +9,17 @@ const validPhone = (value: string) => /^0[0-9]{9}$/.test(value);
 const validEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const validPassword = (value: string) => /\p{Lu}/u.test(value) && /[0-9]/.test(value) && /[\p{P}\p{S}]/u.test(value);
 
+function PasswordToggle({ visible, toggle, controls }: { visible: boolean; toggle: () => void; controls: string }) {
+  return <button type="button" className={s.passwordToggle} onClick={toggle}
+    aria-label={visible ? "Ascunde parola" : "Arată parola"} aria-controls={controls} aria-pressed={visible}>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+      {visible && <path d="m3 3 18 18" />}
+    </svg>
+  </button>;
+}
+
 async function hashPassword(value: string) {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -25,6 +36,11 @@ export default function CustomerAuth({
   const [telefon, setTelefon] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationChecked, setConfirmationChecked] = useState(false);
+  const passwordMismatch = register && confirmationChecked && password !== confirmPassword;
   const [company, setCompany] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -32,6 +48,13 @@ export default function CustomerAuth({
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (loading) return;
+    if (register) {
+      setConfirmationChecked(true);
+      if (password !== confirmPassword) {
+        document.getElementById("customer-confirm-password")?.focus();
+        return;
+      }
+    }
     if (!validPhone(telefon)) {
       setMessage("Introduceți exact 10 cifre, începând cu 0, fără +40. Exemplu: 0754654876.");
       return;
@@ -48,18 +71,32 @@ export default function CustomerAuth({
     setMessage("");
     try {
       if (register) {
-        // Preserve the current registration schema and approval workflow.
+        // Auth owns the password; the existing table retains the B2B approval profile.
+        const { data: account, error: accountError } = await supabase.auth.signUp({
+          email: email.trim(), password,
+          options: { emailRedirectTo: `${window.location.origin}/login`, data: {
+            nume_complet: name.trim(), telefon: telefon.trim(), nume_firma: company.trim() || null,
+          } },
+        });
+        if (accountError || !account.user) {
+          setMessage("Contul nu a putut fi creat. Verifică datele sau încearcă autentificarea."); return;
+        }
+        if (account.user.identities?.length === 0) {
+          setMessage("Verifică emailul sau folosește recuperarea parolei dacă ai deja un cont."); return;
+        }
         const { error } = await supabase.from("utilizatori").insert([
           {
             nume_complet: name.trim(),
             email: email.trim(),
             telefon: telefon.trim(),
-            parola: await hashPassword(password.trim()),
+            // Compatibility with a required legacy column; never store the Auth password here.
+            parola: await hashPassword(crypto.randomUUID()),
             nume_firma: company.trim() || null,
             status: "pending",
             rol: "user",
           },
         ]);
+        await supabase.auth.signOut({ scope: "local" });
         if (error) {
           setMessage(
             error.code === "23505"
@@ -201,7 +238,7 @@ export default function CustomerAuth({
               <h3>Cererea ta a fost înregistrată.</h3>
               <p>
                 Contul este în curs de verificare. Te vei putea autentifica după
-                aprobarea cererii.
+                aprobarea cererii. Verifică emailul și confirmă adresa pentru a te putea autentifica.
               </p>
               <Link href="/login" className={s.primary}>
                 Mergi la autentificare →
@@ -260,11 +297,12 @@ export default function CustomerAuth({
               </label>
               {register && (
                 <>
-                  <label className={s.field} htmlFor="customer-password">
-                    Parolă
+                  <div className={s.field}>
+                    <label htmlFor="customer-password">Parolă</label>
+                    <div className={s.passwordInput}>
                     <input
                       id="customer-password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       autoComplete="new-password"
                       aria-describedby="password-rules"
                       required
@@ -272,8 +310,22 @@ export default function CustomerAuth({
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Parola contului"
                     />
+                    <PasswordToggle visible={showPassword} toggle={() => setShowPassword((shown) => !shown)} controls="customer-password" />
+                    </div>
                     <small id="password-rules">Cel puțin o literă mare, o cifră și un semn de punctuație sau un caracter special (de exemplu !, ?, @).</small>
-                  </label>
+                  </div>
+                  <div className={s.field}>
+                    <label htmlFor="customer-confirm-password">Confirmă Parola</label>
+                    <div className={s.passwordInput}>
+                      <input id="customer-confirm-password" type={showConfirmation ? "text" : "password"}
+                        autoComplete="new-password" required value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)} onBlur={() => setConfirmationChecked(true)}
+                        aria-invalid={passwordMismatch} aria-describedby={passwordMismatch ? "password-mismatch" : undefined}
+                        placeholder="Repetă parola" />
+                      <PasswordToggle visible={showConfirmation} toggle={() => setShowConfirmation((shown) => !shown)} controls="customer-confirm-password" />
+                    </div>
+                    {passwordMismatch && <small id="password-mismatch" className={s.passwordError} role="alert">Parolele nu se potrivesc</small>}
+                  </div>
                   <label className={s.field} htmlFor="customer-company">
                     Nume firmă <small>Opțional</small>
                     <input

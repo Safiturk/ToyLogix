@@ -137,6 +137,89 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.headerAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 12px 15px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.accountControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.accountBadge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 20px;
+  margin-right: 10px;
+  border-right: 1px solid #e8e6ec;
+}
+.accountAvatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f0edf6;
+  color: #62517e;
+  font-size: 12px;
+  font-weight: 650;
+}
+.accountIdentity {
+  display: grid;
+  gap: 3px;
+  color: #292531;
+  line-height: 1.3;
+}
+.accountIdentity small {
+  color: #837d8d;
+  font-size: 10px;
+  font-weight: 400;
+}
+.navigation .adminAction,
+.navigation > .adminAction:hover {
+  color: #fff;
+  background: #292531;
+  border-color: #292531;
+}
+.logoutAction {
+  color: #77717f;
+  background: transparent;
+  padding-inline: 10px;
+}
+.headerAction:focus-visible {
+  outline: 3px solid #7c3aed;
+  outline-offset: 3px;
+  box-shadow: 0 6px 18px #5034ad26;
+}
+@media (hover: hover) and (pointer: fine) {
+  .navigation .adminAction:hover {
+    background: #423b50;
+    box-shadow: 0 3px 9px #29253120;
+  }
+  .logoutAction:hover {
+    color: #9f2942;
+    background: #faf1f3;
+  }
+}
+@media (max-width: 720px) {
+  .accountControls { width: 100%; gap: 6px; }
+  .accountBadge { margin-right: auto; padding-right: 10px; border-right: 0; gap: 8px; }
+  .accountControls .headerAction { padding-inline: 10px; font-size: 12px; }
+  .logoutAction span { display: none; }
+}
 .container {
   max-width: 1280px;
   padding: 32px;
@@ -923,6 +1006,26 @@
   font-size: 15px;
   font-weight: 400;
 }
+.passwordInput { position: relative; }
+.field .passwordInput input { width: 100%; padding-right: 52px; }
+.passwordToggle {
+  position: absolute;
+  right: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  transition: background 0.2s, color 0.2s;
+}
+.passwordToggle:hover { background: #f0eafa; color: var(--purple); }
+.field input[aria-invalid="true"] { border-color: #be3455; }
+.field small.passwordError { color: #b42343; }
 .field input::placeholder {
   color: #9a93a5;
 }
@@ -1274,7 +1377,7 @@
 }
 .menuDrawer {
   position: fixed;
-  inset: 0 0 0 auto;
+  inset: 0 auto 0 0;
   margin: 0;
   width: min(380px, 90vw);
   height: 100dvh;
@@ -1284,15 +1387,31 @@
   border: 0;
   background: #fff;
   color: var(--ink);
-  box-shadow: -16px 0 60px #29223e30;
+  box-shadow: 16px 0 60px #29223e30;
   animation: drawerEnter 0.25s ease-out;
 }
 .menuDrawer::backdrop {
   background: #27203788;
   backdrop-filter: blur(3px);
+  animation: backdropEnter 0.25s ease-out;
 }
 .menuClosing {
   animation: drawerExit 0.22s ease-in forwards;
+}
+.menuClosing::backdrop {
+  animation: backdropExit 0.22s ease-in forwards;
+}
+@keyframes backdropEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes backdropExit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menuDrawer::backdrop { animation: none; }
+  .headerAction:hover { transform: none; }
 }
 .menuContent {
   min-height: 100%;
@@ -1476,6 +1595,20 @@
 .categoryPage .cardImage {
   height: 200px;
 }
+@media (hover: hover) and (pointer: fine) {
+  .cardImage {
+    overflow: hidden;
+  }
+  .cardImage > img {
+    transform: scale(1);
+    transform-origin: var(--zoom-x, center) var(--zoom-y, center);
+    transition: transform 420ms cubic-bezier(.2, .75, .25, 1), transform-origin 80ms linear;
+    will-change: transform;
+  }
+  .card:hover .cardImage > img {
+    transform: scale(1.85);
+  }
+}
 .pagination {
   display: flex;
   align-items: center;
@@ -1552,7 +1685,7 @@
 }
 @keyframes drawerEnter {
   from {
-    transform: translateX(100%);
+    transform: translateX(-100%);
   }
   to {
     transform: translateX(0);
@@ -1563,7 +1696,7 @@
     transform: translateX(0);
   }
   to {
-    transform: translateX(100%);
+    transform: translateX(-100%);
   }
 }
 @media (max-width: 1000px) {
