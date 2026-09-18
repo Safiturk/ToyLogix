@@ -45,6 +45,7 @@ export default function CustomerAuth({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (loading) return;
@@ -79,7 +80,21 @@ export default function CustomerAuth({
           } },
         });
         if (accountError || !account.user) {
-          setMessage("Contul nu a putut fi creat. Verifică datele sau încearcă autentificarea."); return;
+          const code = accountError?.code;
+          if (accountError?.message.toLowerCase().includes("sending confirmation email")) {
+            setMessage("Emailul de confirmare nu a putut fi trimis. Contactează echipa ToyLogix pentru activarea contului.");
+          } else if (code === "user_already_exists" || code === "email_exists") {
+            setMessage("Există deja un cont cu această adresă. Încearcă autentificarea sau recuperarea parolei.");
+          } else if (code === "over_email_send_rate_limit" || code === "over_request_rate_limit" || accountError?.status === 429) {
+            setMessage("Prea multe încercări. Așteaptă câteva minute înainte de a încerca din nou.");
+          } else if (code === "weak_password") {
+            setMessage("Parola nu îndeplinește cerințele de securitate. Alege o parolă mai lungă și mai puternică.");
+          } else if (code === "signup_disabled" || code === "email_provider_disabled") {
+            setMessage("Înregistrarea este momentan dezactivată. Contactează echipa ToyLogix.");
+          } else {
+            setMessage(`Contul nu a putut fi creat. Contactează echipa ToyLogix. Cod: ${code || "registration_unavailable"}.`);
+          }
+          return;
         }
         if (account.user.identities?.length === 0) {
           setMessage("Verifică emailul sau folosește recuperarea parolei dacă ai deja un cont."); return;
@@ -106,6 +121,7 @@ export default function CustomerAuth({
           return;
         }
         // Keep the existing notification integration. A notification failure must not prompt a duplicate registration.
+        setNeedsEmailConfirmation(!account.session);
         setSuccess(true);
         try {
           await fetch("https://formspree.io/f/mwvggppn", {
@@ -238,7 +254,7 @@ export default function CustomerAuth({
               <h3>Cererea ta a fost înregistrată.</h3>
               <p>
                 Contul este în curs de verificare. Te vei putea autentifica după
-                aprobarea cererii. Verifică emailul și confirmă adresa pentru a te putea autentifica.
+                aprobarea cererii. {needsEmailConfirmation && "Verifică emailul și confirmă adresa pentru a te putea autentifica."}
               </p>
               <Link href="/login" className={s.primary}>
                 Mergi la autentificare →
