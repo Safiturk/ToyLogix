@@ -101,6 +101,55 @@ function Picture({
   );
 }
 
+function Favorites({ products, loading, error, close, openProduct, remove, favoriteError }: {
+  products: Product[];
+  loading: boolean;
+  error: string;
+  close: () => void;
+  openProduct: (product: Product) => void;
+  remove: (id: number) => void;
+  favoriteError: string;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    dialog?.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog?.close();
+      document.body.style.overflow = overflow;
+      previous?.focus();
+    };
+  }, []);
+  return <dialog ref={ref} id="favorites-dialog" className={s.dialog} aria-labelledby="favorites-title"
+    onCancel={close} onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
+    <div className={s.dialogContent}>
+      <header className={s.dialogTop}>
+        <div><span className={s.eyebrow}>COLECȚIA TA</span><h2 id="favorites-title" className={s.favoritesTitle}>Produsele favorite <span className={s.countBadge}>{products.length}</span></h2></div>
+        <button className={s.iconButton} onClick={close} aria-label="Închide favoritele">✕</button>
+      </header>
+      <p className={s.muted}>Toate produsele salvate, din toate categoriile, într-un singur loc.</p>
+      {favoriteError && <p role="alert" className={s.priceWarning}>{favoriteError}</p>}
+      {loading ? <p role="status">Se încarcă favoritele…</p> : error ? <p role="alert">{error}</p> : products.length ?
+        <ul className={s.favoritesList}>
+          {products.map((product) => <li className={s.favoriteItem} key={product.id}>
+            <button className={s.favoriteProduct} onClick={() => openProduct(product)} aria-label={`Vezi detalii: ${product.nume_produs}`}>
+              <div className={s.favoriteImage}><Picture src={images(product)[0]} name={product.nume_produs} /></div>
+              <div><small className={s.muted}>{product.categorie}</small><h3>{product.nume_produs}</h3>
+                <span className={s.muted}>Preț en-gros</span><strong>{money(product.pret_engros)}</strong>
+                <small className={s.muted}>RRP {money(product.pret_retail)} · {product.bucati_per_cutie || "—"} buc./cutie</small>
+              </div>
+            </button>
+            <button className={s.textButton} onClick={() => remove(product.id)} aria-label={`Elimină din favorite: ${product.nume_produs}`}>Elimină</button>
+          </li>)}
+        </ul> : <div className={s.empty}><span aria-hidden="true">♡</span><h3>Încă nu ai produse favorite</h3><p>Apasă pe inimioara unui produs pentru a-l găsi aici.</p></div>}
+      <button className={s.secondary} onClick={close}>Continuă cumpărăturile</button>
+    </div>
+  </dialog>;
+}
+
 function Details({
   product: p,
   close,
@@ -254,7 +303,7 @@ export default function Storefront({
   const [pagination, setPagination] = useState({ key: "", page: 1 });
   const [brands, setBrands] = useState<string[]>([]);
   const [materials, setMaterials] = useState<string[]>([]);
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
   const [age, setAge] = useState("");
   const [stockOnly, setStockOnly] = useState(false);
   const [sort, setSort] = useState("new");
@@ -350,7 +399,6 @@ export default function Storefront({
           : norm(p.categorie) === norm(category))) &&
         (!brands.length || brands.some((value) => norm(p.brand) === norm(value))) &&
         (!materials.length || materials.some((value) => norm(p.material) === norm(value))) &&
-        (!favoritesOnly || favorites.includes(p.id)) &&
         (!age || norm(p.varsta_recomandata) === norm(age)) &&
         (!stockOnly || Number(p.stoc_actual) > 0) &&
         (minPrice === "" || Number(p.pret_engros) >= Number(minPrice)) &&
@@ -371,20 +419,17 @@ export default function Storefront({
     setMaxPrice("");
     setBrands([]);
     setMaterials([]);
-    setFavoritesOnly(false);
     setAge("");
     setStockOnly(false);
   };
   const active = Boolean(
-    query || brands.length || materials.length || favoritesOnly || age || stockOnly || minPrice || maxPrice,
+    query || brands.length || materials.length || age || stockOnly || minPrice || maxPrice,
   );
   const pageKey = JSON.stringify([
     query,
     category,
     brands,
     materials,
-    favoritesOnly,
-    favoritesOnly ? favorites : null,
     age,
     stockOnly,
     sort,
@@ -539,10 +584,7 @@ export default function Storefront({
                     {theme === "dark" ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></> : <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" />}
                   </svg>
                 </button>
-                <button className={s.wishlistLink} aria-pressed={favoritesOnly} onClick={() => {
-                  setFavoritesOnly((value) => !value);
-                  document.getElementById("catalog")?.scrollIntoView({ block: "start" });
-                }}><span aria-hidden="true">♡</span> Favorite <b>{favorites.length}</b></button>
+                <button className={s.wishlistLink} aria-haspopup="dialog" aria-expanded={favoritesOpen} aria-controls="favorites-dialog" onClick={() => setFavoritesOpen(true)}><span aria-hidden="true">♡</span> Favorite <b>{favorites.length}</b></button>
                 <Link href="/account" className={s.accountBadge} aria-label="Contul meu">
                   <span className={s.accountAvatar} aria-hidden="true">{(user.nume_complet || "Partener").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("ro")}</span>
                   <div className={s.accountIdentity}>
@@ -930,6 +972,10 @@ export default function Storefront({
           close={() => setCategoryOpen(false)}
         />
       )}
+      {favoritesOpen && <Favorites products={products.filter((product) => favorites.includes(product.id))}
+        loading={loading} error={error} favoriteError={favoriteError}
+        close={() => setFavoritesOpen(false)} remove={toggleFavorite}
+        openProduct={(product) => { setFavoritesOpen(false); setSelected(product); }} />}
       {selected && (
         <Details
           key={selected.id}

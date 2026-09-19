@@ -1877,3 +1877,22 @@
 .dark .logoutAction { color: var(--muted); }
 .dark .logoutAction:hover { background: #382735; color: #f1a8ba; }
 .dark .logoMark { background: #7855d6; }
+.favoritesTitle { font-size: 26px; font-weight: 750; margin: 5px 0; }
+.favoritesList { list-style: none; padding: 0; margin: 24px 0; display: grid; gap: 12px; }
+.favoriteItem { display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; }
+.favoriteProduct { display: flex; align-items: center; gap: 20px; flex: 1; min-width: 0; text-align: left; color: var(--ink); background: transparent; border: 0; padding: 0; }
+.favoriteProduct h3 { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.favoriteProduct strong { display: block; color: var(--purple); font-size: 20px; }
+.favoriteProduct small { display: block; }
+.favoriteImage { width: 110px; height: 110px; flex-shrink: 0; padding: 10px; border-radius: 6px; background: white; }
+.favoriteImage img { width: 100%; height: 100%; object-fit: contain; }
+.favoriteImage .noImage { min-height: 0; }
+.favoriteImage .noImage small { display: none; }
+@media (max-width: 540px) {
+  .favoritesTitle { font-size: 21px; }
+  .favoriteItem { flex-wrap: wrap; padding: 12px; }
+  .favoriteProduct { gap: 12px; flex-basis: 100%; }
+  .favoriteImage { width: 75px; height: 85px; }
+  .favoriteProduct h3 { font-size: 14px; }
+  .favoriteItem > .textButton { margin-left: auto; }
+}
