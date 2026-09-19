@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { signOutAccount } from '@/lib/account';
 import { categorySlug } from "@/lib/category-path";
 import BarcodeScanner from "../components/BarcodeScanner";
+import FilterDrawer from "../components/FilterDrawer";
 import CategoryDrawer from "../components/CategoryDrawer";
 import s from "../customer.module.css";
 
@@ -31,6 +32,7 @@ interface Product {
   descriere?: string;
 }
 interface Session {
+  id?: number;
   nume_complet?: string;
   rol?: string;
 }
@@ -101,9 +103,15 @@ function Picture({
 function Details({
   product: p,
   close,
+  isFavorite,
+  toggleFavorite,
+  favoriteError,
 }: {
   product: Product;
   close: () => void;
+  isFavorite: boolean;
+  toggleFavorite: () => void;
+  favoriteError: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [index, setIndex] = useState(0);
@@ -172,6 +180,15 @@ function Details({
           <div className={s.detailInfo}>
             <p className={s.muted}>{p.brand || "ToyLogix · Catalog"}</p>
             <h2 id="product-title">{p.nume_produs}</h2>
+            <button
+              className={`${s.secondary} ${s.detailFavorite}`}
+              aria-pressed={isFavorite}
+              onClick={toggleFavorite}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" /></svg>
+              {isFavorite ? "Elimină din favorite" : "Adaugă la favorite"}
+            </button>
+            {favoriteError && <p role="alert" className={s.priceWarning}>{favoriteError}</p>}
             <span
               className={Number(p.stoc_actual) > 0 ? s.inStock : s.outOfStock}
             >
@@ -216,9 +233,11 @@ function Details({
 export default function Storefront({
   categoryName,
   requestedSlug,
+  showPromotion = true,
 }: {
   categoryName?: string;
   requestedSlug?: string;
+  showPromotion?: boolean;
 }) {
   const isCategoryPage = categoryName !== undefined || requestedSlug !== undefined;
   const category = categoryName ?? (requestedSlug ? requestedSlug.replace(/-/g, " ") : "");
@@ -232,6 +251,8 @@ export default function Storefront({
   const [pageSize, setPageSize] = useState(12);
   const [pagination, setPagination] = useState({ key: "", page: 1 });
   const [brands, setBrands] = useState<string[]>([]);
+  const [materials, setMaterials] = useState<string[]>([]);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [age, setAge] = useState("");
   const [stockOnly, setStockOnly] = useState(false);
   const [sort, setSort] = useState("new");
@@ -243,6 +264,25 @@ export default function Storefront({
     () => undefined,
   );
   const user = parseSession(session ?? null);
+  const favoritesKey = user?.id ? `toylogix-favorites:${user.id}` : "toylogix-favorites";
+  const savedFavorites = useSyncExternalStore(subscribeSession, () => {
+    try { return localStorage.getItem(favoritesKey); } catch { return null; }
+  }, () => null);
+  const favorites: number[] = (() => {
+    try {
+      const saved: unknown = JSON.parse(savedFavorites || "[]");
+      return Array.isArray(saved) ? saved.filter((id): id is number => typeof id === "number") : [];
+    } catch { return []; }
+  })();
+  const [favoriteError, setFavoriteError] = useState("");
+  const toggleFavorite = (id: number) => {
+    try {
+      const next = favorites.includes(id) ? favorites.filter((value) => value !== id) : [...favorites, id];
+      localStorage.setItem(favoritesKey, JSON.stringify(next));
+      window.dispatchEvent(new Event("toylogix-session"));
+      setFavoriteError("");
+    } catch { setFavoriteError("Favoritele nu pot fi salvate. Permite stocarea locală în browser."); }
+  };
   useEffect(() => {
     if (session !== undefined && !parseSession(session))
       router.replace("/login");
@@ -282,15 +322,16 @@ export default function Storefront({
     void load(controller.signal);
     return () => controller.abort();
   }, [load, session]);
-  const values = (field: "categorie" | "brand" | "varsta_recomandata") =>
+  const categoryProducts = products.filter((p) => !isCategoryPage || (requestedSlug
+    ? categorySlug(p.categorie || "") === requestedSlug
+    : norm(p.categorie) === norm(category)));
+  const displayCategory = categoryProducts[0]?.categorie || category;
+  const facetCount = (field: "brand" | "material", value: string) =>
+    categoryProducts.filter((p) => norm(p[field]) === norm(value)).length;
+  const values = (field: "categorie" | "brand" | "varsta_recomandata" | "material") =>
     Array.from(
       new Map(
-        (field === "categorie"
-          ? products
-              : products.filter((p) => !isCategoryPage || (requestedSlug
-                ? categorySlug(p.categorie || "") === requestedSlug
-                : norm(p.categorie) === norm(category)))
-        )
+        (field === "categorie" ? products : categoryProducts)
           .filter((p) => p[field]?.trim())
           .map((p) => [norm(p[field]), p[field].trim()]),
       ).values(),
@@ -306,6 +347,8 @@ export default function Storefront({
           ? categorySlug(p.categorie || "") === requestedSlug
           : norm(p.categorie) === norm(category))) &&
         (!brands.length || brands.some((value) => norm(p.brand) === norm(value))) &&
+        (!materials.length || materials.some((value) => norm(p.material) === norm(value))) &&
+        (!favoritesOnly || favorites.includes(p.id)) &&
         (!age || norm(p.varsta_recomandata) === norm(age)) &&
         (!stockOnly || Number(p.stoc_actual) > 0) &&
         (minPrice === "" || Number(p.pret_engros) >= Number(minPrice)) &&
@@ -325,16 +368,21 @@ export default function Storefront({
     setMinPrice("");
     setMaxPrice("");
     setBrands([]);
+    setMaterials([]);
+    setFavoritesOnly(false);
     setAge("");
     setStockOnly(false);
   };
   const active = Boolean(
-    query || brands.length || age || stockOnly || minPrice || maxPrice,
+    query || brands.length || materials.length || favoritesOnly || age || stockOnly || minPrice || maxPrice,
   );
   const pageKey = JSON.stringify([
     query,
     category,
     brands,
+    materials,
+    favoritesOnly,
+    favoritesOnly ? favorites : null,
     age,
     stockOnly,
     sort,
@@ -363,65 +411,48 @@ export default function Storefront({
   const scanSuccess = useCallback((code: string) => {
     setQuery(code);
     setScanner(false);
-  }, []);
+  }, [setScanner]);
   const featured = products.find((p) => images(p).length > 0);
   const filterControls = (
     <>
-      <label>
-        Preț en-gros (RON)
-        <div className={s.rangeSlider}>
-          <input aria-label="Preț minim slider" type="range" min="0" max="1000" step="10" value={Number(minPrice) || 0} onChange={(e) => setMinPrice(e.target.value)} />
-          <input aria-label="Preț maxim slider" type="range" min="0" max="1000" step="10" value={Number(maxPrice) || 1000} onChange={(e) => setMaxPrice(e.target.value)} />
+      {(["brand", "material"] as const).map((field) => {
+        const selectedValues = field === "brand" ? brands : materials;
+        const update = field === "brand" ? setBrands : setMaterials;
+        return <details className={s.filterSection} open key={field}>
+          <summary>{field === "brand" ? "Brand" : "Material"}</summary>
+          <div className={s.facetOptions}>
+            {values(field).map((v) => <label className={s.checkbox} key={v}>
+              <input type="checkbox" checked={selectedValues.includes(v)} onChange={() =>
+                update((current) => current.includes(v) ? current.filter((item) => item !== v) : [...current, v])
+              } />
+              <span>{v} <span className={s.muted}>({facetCount(field, v)})</span></span>
+            </label>)}
+            {!values(field).length && <small className={s.muted}>Nicio opțiune disponibilă</small>}
+          </div>
+        </details>;
+      })}
+      <details className={s.filterSection} open>
+        <summary>Vârstă</summary>
+        <label className={s.facetOptions}>
+          <span className={s.screenReader}>Vârstă recomandată</span>
+          <select value={age} onChange={(e) => setAge(e.target.value)}>
+            <option value="">Toate vârstele</option>
+            {values("varsta_recomandata").map((v) => <option key={v}>{v}</option>)}
+          </select>
+        </label>
+      </details>
+      <details className={s.filterSection} open>
+        <summary>Preț en-gros (RON)</summary>
+        <div className={s.facetOptions}>
+          <div className={s.priceRange}>
+            <input aria-label="Preț minim" type="number" min="0" step="0.01" placeholder="De la" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} />
+            <span>–</span>
+            <input aria-label="Preț maxim" type="number" min="0" step="0.01" placeholder="Până la" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} />
+          </div>
+          {minPrice !== "" && maxPrice !== "" && Number(minPrice) > Number(maxPrice) &&
+            <p role="alert" className={s.priceWarning}>Prețul minim trebuie să fie mai mic decât prețul maxim.</p>}
         </div>
-        <div className={s.priceRange}>
-          <input
-            aria-label="Preț minim"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="De la"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-          />
-          <span>—</span>
-          <input
-            aria-label="Preț maxim"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="Până la"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-          />
-        </div>
-      </label>
-      {minPrice !== "" &&
-        maxPrice !== "" &&
-        Number(minPrice) > Number(maxPrice) && (
-          <p role="alert" className={s.priceWarning}>
-            Prețul minim trebuie să fie mai mic decât prețul maxim.
-          </p>
-        )}
-      <fieldset className={s.brandFilters}>
-        <legend>Brand</legend>
-        {values("brand").map((v) => (
-          <label className={s.checkbox} key={v}>
-            <input type="checkbox" checked={brands.includes(v)} onChange={() =>
-              setBrands((current) => current.includes(v) ? current.filter((item) => item !== v) : [...current, v])
-            } />
-            {v}
-          </label>
-        ))}
-      </fieldset>
-      <label>
-        Vârstă
-        <select value={age} onChange={(e) => setAge(e.target.value)}>
-          <option value="">Toate vârstele</option>
-          {values("varsta_recomandata").map((v) => (
-            <option key={v}>{v}</option>
-          ))}
-        </select>
-      </label>
+      </details>
       <label className={s.checkbox}>
         <input
           type="checkbox"
@@ -478,9 +509,31 @@ export default function Storefront({
               </svg>
             </button>
           </div>
+          <div className={`${s.search} ${s.headerSearch}`}>
+            <span aria-hidden="true">⌕</span>
+            <input
+              aria-label="Caută produse"
+              placeholder="Caută un produs, brand sau cod de bare…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <button title="Scanează codul de bare" aria-label="Scanează codul de bare" onClick={() => setScanner(true)}>▥</button>
+            {query && (
+              <button
+                aria-label="Șterge căutarea"
+                onClick={() => setQuery("")}
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <nav className={s.navigation} aria-label="Navigare principală">
             {user ? (
               <div className={s.accountControls}>
+                <button className={s.wishlistLink} aria-pressed={favoritesOnly} onClick={() => {
+                  setFavoritesOnly((value) => !value);
+                  document.getElementById("catalog")?.scrollIntoView({ block: "start" });
+                }}><span aria-hidden="true">♡</span> Favorite <b>{favorites.length}</b></button>
                 <Link href="/account" className={s.accountBadge} aria-label="Contul meu">
                   <span className={s.accountAvatar} aria-hidden="true">{(user.nume_complet || "Partener").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("ro")}</span>
                   <div className={s.accountIdentity}>
@@ -574,13 +627,11 @@ export default function Storefront({
             <nav className={s.breadcrumb} aria-label="Breadcrumb">
               <Link href="/store">Acasă</Link>
               <span aria-hidden="true">›</span>
-              <span aria-current="page">{category}</span>
+              <span aria-current="page">{displayCategory}</span>
             </nav>
-            <span className={s.eyebrow}>CATALOG PROFESIONAL B2B</span>
-            <h1>{category}</h1>
-            <p>
-              Produse, prețuri en-gros și disponibilitate pentru magazinul tău.
-            </p>
+            <div className={s.categoryTitle}><h1>{displayCategory}</h1>
+              {!loading && !error && <span className={s.countBadge}>({categoryProducts.length} {categoryProducts.length === 1 ? "produs" : "produse"})</span>}
+            </div>
           </div>
         )}
         <section
@@ -606,36 +657,18 @@ export default function Storefront({
           )}
           <div className={isCategoryPage ? s.categoryLayout : undefined}>
             {isCategoryPage && (
-              <aside className={`${s.filterSidebar} ${filtersOpen ? s.mobileFilterOpen : ""}`} aria-label="Filtre produse">
+              <aside className={s.filterSidebar} aria-label="Filtre produse">
                 <h2>Filtrează produsele</h2>
                 {filterControls}
               </aside>
             )}
             <div className={s.catalogResults}>
+              {isCategoryPage && showPromotion && <aside className={s.promoStrip} aria-label="Descoperă catalogul ToyLogix">
+                <span className={s.promoIcon} aria-hidden="true">✦</span>
+                <div><strong>Idei mici. Oportunități mari.</strong><p>Descoperă următoarele favorite ale magazinului tău.</p></div>
+                <span className={s.promoLabel}>COLECȚIA TOYLOGIX</span>
+              </aside>}
               <div className={s.toolbar}>
-                <div className={s.search}>
-                  <span aria-hidden="true">⌕</span>
-                  <input
-                    aria-label="Caută produse"
-                    placeholder="Caută un produs, brand sau cod de bare…"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                  {query && (
-                    <button
-                      aria-label="Șterge căutarea"
-                      onClick={() => setQuery("")}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-                <button
-                  className={s.secondary}
-                  onClick={() => setScanner(true)}
-                >
-                  Scanează codul
-                </button>
                 {!isCategoryPage && (
                   <button
                     className={s.secondary}
@@ -646,13 +679,14 @@ export default function Storefront({
                     Filtre {filtersOpen ? "−" : "+"}
                   </button>
                 )}
-                {isCategoryPage && <button className={`${s.secondary} ${s.mobileFilterButton}`} onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen}>Filtrează</button>}
+                {isCategoryPage && <button className={`${s.secondary} ${s.mobileFilterButton}`} onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen} aria-controls="mobile-filters">Filtrează</button>}
               </div>
               {!isCategoryPage && filtersOpen && (
                 <div id="catalog-filters" className={s.filters}>
                   {filterControls}
                 </div>
               )}
+              {favoriteError && <p role="alert" className={s.priceWarning}>{favoriteError}</p>}
               <div className={s.resultRow}>
                 <span role="status">
                   {loading
@@ -678,6 +712,21 @@ export default function Storefront({
                     <option value="name">Nume A–Z</option>
                   </select>
                 </label>
+                {isCategoryPage && (
+                  <label>
+                    Produse pe pagină
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                    >
+                      {[12, 24, 48].map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
               </div>
               {loading ? (
                 <div className={s.grid} aria-busy="true">
@@ -721,12 +770,12 @@ export default function Storefront({
               ) : (
                 <div className={s.grid}>
                   {pageProducts.map((p) => (
-                    <button
-                      key={p.id}
-                      className={s.card}
-                      onClick={() => setSelected(p)}
-                      aria-label={`Vezi detalii: ${p.nume_produs}`}
-                    >
+                    <article key={p.id} className={s.card}>
+                      <button className={s.favoriteButton} aria-label={`${favorites.includes(p.id) ? "Elimină din" : "Adaugă la"} favorite: ${p.nume_produs}`} aria-pressed={favorites.includes(p.id)} onClick={() => toggleFavorite(p.id)}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill={favorites.includes(p.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" /></svg>
+                      </button>
+                      <button className={s.productOpen} onClick={() => setSelected(p)} aria-label={`Vezi detalii: ${p.nume_produs}`}>
+
                       <div
                         className={s.cardImage}
                         onMouseMove={(event) => {
@@ -743,7 +792,7 @@ export default function Storefront({
                       >
                         <Picture src={images(p)[0]} name={p.nume_produs} />
                         <span className={s.categoryTag}>
-                          {p.categorie || "Jucării"}
+                          EN-GROS
                         </span>
                         <span className={s.cardArrow} aria-hidden="true">
                           ↗
@@ -782,25 +831,13 @@ export default function Storefront({
                           </span>
                         </div>
                       </div>
-                    </button>
+                      </button>
+                    </article>
                   ))}
                 </div>
               )}
               {isCategoryPage && !loading && !error && filtered.length > 0 && (
                 <nav className={s.pagination} aria-label="Paginare produse">
-                  <label>
-                    Produse / pagină
-                    <select
-                      value={pageSize}
-                      onChange={(e) => setPageSize(Number(e.target.value))}
-                    >
-                      {[12, 24, 48].map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
                   <div>
                     <button
                       disabled={currentPage === 1}
@@ -876,10 +913,11 @@ export default function Storefront({
         </nav>
         <small>© {new Date().getFullYear()} ToyLogix</small>
       </footer>
+      {isCategoryPage && filtersOpen && <FilterDrawer close={() => setFiltersOpen(false)} count={filtered.length}>{filterControls}</FilterDrawer>}
       {categoryOpen && (
         <CategoryDrawer
           categories={values("categorie")}
-          current={category}
+          current={isCategoryPage ? displayCategory : ""}
           close={() => setCategoryOpen(false)}
         />
       )}
@@ -888,6 +926,9 @@ export default function Storefront({
           key={selected.id}
           product={selected}
           close={() => setSelected(null)}
+          isFavorite={favorites.includes(selected.id)}
+          toggleFavorite={() => toggleFavorite(selected.id)}
+          favoriteError={favoriteError}
         />
       )}{" "}
       {scanner && (
