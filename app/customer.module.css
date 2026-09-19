@@ -1834,3 +1834,43 @@
   .headerInner .accountControls { width: auto; }
   .headerInner .accountBadge { padding-right: 0; }
 }
+/* Catalog theme: product photography keeps a neutral white canvas. */
+.themeToggle { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--ink); }
+.themeToggle:hover { color: var(--purple); border-color: var(--purple); }
+.page.dark { --ink: #f1edf8; --muted: #b5aec5; --purple: #bba3ff; --line: #393346; background: #15121d; color-scheme: dark; }
+.dark .header, .dark .filterSidebar, .dark .card, .dark .productOpen,
+.dark .dialog, .dark .menuDrawer, .dark .empty, .dark .search,
+.dark .iconButton, .dark .hamburger, .dark .secondary,
+.dark .pagination button, .dark .pagination select,
+.dark .resultRow select, .dark .filterSidebar input:not([type="checkbox"]),
+.dark .facetOptions select, .dark .priceRange input {
+  background: #211d2b; color: var(--ink); border-color: var(--line);
+}
+.dark .accountIdentity { color: var(--ink); }
+.dark .accountIdentity small, .dark .heroCopy > p, .dark .heroMeta,
+.dark .artLabel, .dark .artNote { color: var(--muted); }
+.dark .accountBadge { border-color: var(--line); }
+.dark .resultRow, .dark .filters, .dark .pricePanel, .dark .hero,
+.dark .heroArt, .dark .partner, .dark .accountAvatar,
+.dark .countBadge, .dark .wishlistLink b { background: #2c253c; border-color: var(--line); }
+.dark .accountAvatar { color: var(--purple); }
+.dark .promoStrip { background: linear-gradient(110deg, #332544, #262031 65%, #332b25); border-color: #51415f; }
+.dark .primary, .dark .pagination button[aria-current="page"] { background: #7855d6; color: #fff; border-color: #9272ec; }
+.dark .primary:hover { background: #8965e4; }
+.dark .secondary:hover, .dark .hamburger:hover, .dark .hamburger[aria-expanded="true"],
+.dark .menuContent nav a:hover, .dark .menuContent nav a[aria-current="page"],
+.dark .detailFavorite[aria-pressed="true"] { background: #382c50; color: var(--purple); }
+.dark .inStock { color: #80d7ae; }
+.dark .outOfStock, .dark .priceWarning { color: #f1a8ba; }
+.dark .skeleton { background: linear-gradient(110deg, #252030 30%, #332d40 45%, #252030 60%); background-size: 200% 100%; }
+.dark .cardImage, .dark .detailImage, .dark .thumbnails button, .dark .featuredProduct { background: #fff; color-scheme: light; }
+.dark .featuredProduct { color: #24213b; }
+.dark .categoryTag, .dark .favoriteButton, .dark .cardArrow { color: #6546c8; }
+.dark .favoriteButton[aria-pressed="true"] { color: #6546c8; background: #f0eafa; }
+.dark .card:hover { border-color: #8f73ba; }
+.dark .dialog::backdrop, .dark .menuDrawer::backdrop { background: #08060dcc; }
+.dark .search input::placeholder { color: var(--muted); }
+@media (max-width: 420px) {
+  .headerInner .accountControls { gap: 5px; }
+  .headerInner .accountBadge { margin-right: 0; }
+}

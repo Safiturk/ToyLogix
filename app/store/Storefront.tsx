@@ -15,6 +15,7 @@ import BarcodeScanner from "../components/BarcodeScanner";
 import FilterDrawer from "../components/FilterDrawer";
 import CategoryDrawer from "../components/CategoryDrawer";
 import s from "../customer.module.css";
+import { useCatalogTheme } from "./useCatalogTheme";
 
 interface Product {
   id: number;
@@ -242,6 +243,7 @@ export default function Storefront({
   const isCategoryPage = categoryName !== undefined || requestedSlug !== undefined;
   const category = categoryName ?? (requestedSlug ? requestedSlug.replace(/-/g, " ") : "");
   const router = useRouter();
+  const { theme, toggleTheme } = useCatalogTheme();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -468,7 +470,7 @@ export default function Storefront({
   );
   if (!user) return null;
   return (
-    <div className={`${s.page} ${isCategoryPage ? s.categoryPage : ""}`}>
+    <div className={`${s.page} ${isCategoryPage ? s.categoryPage : ""} ${theme === "dark" ? s.dark : ""}`} data-theme={theme}>
       <a className={s.skipLink} href="#catalog">
         Mergi la catalog
       </a>
@@ -530,6 +532,13 @@ export default function Storefront({
           <nav className={s.navigation} aria-label="Navigare principală">
             {user ? (
               <div className={s.accountControls}>
+                <button className={s.themeToggle} onClick={toggleTheme}
+                  aria-label={theme === "dark" ? "Activează tema luminoasă" : "Activează tema întunecată"}
+                  title={theme === "dark" ? "Tema luminoasă" : "Tema întunecată"} aria-pressed={theme === "dark"}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+                    {theme === "dark" ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></> : <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" />}
+                  </svg>
+                </button>
                 <button className={s.wishlistLink} aria-pressed={favoritesOnly} onClick={() => {
                   setFavoritesOnly((value) => !value);
                   document.getElementById("catalog")?.scrollIntoView({ block: "start" });
