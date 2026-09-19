@@ -1874,3 +1874,6 @@
   .headerInner .accountControls { gap: 5px; }
   .headerInner .accountBadge { margin-right: 0; }
 }
+.dark .logoutAction { color: var(--muted); }
+.dark .logoutAction:hover { background: #382735; color: #f1a8ba; }
+.dark .logoMark { background: #7855d6; }
