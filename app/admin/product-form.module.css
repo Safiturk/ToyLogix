@@ -25,11 +25,11 @@
 .form { padding: 28px 32px 0; display: grid; gap: 24px; }
 .sectionTitle { display: flex; align-items: center; gap: 10px; }
 .sectionTitle span { color: #8b829c; font-size: 11px; font-variant-numeric: tabular-nums; }
-.sectionTitle h3 { font-size: 14px; font-weight: 650; letter-spacing: -0.2px; }
+.sectionTitle h2, .sectionTitle h3 { font-size: 14px; font-weight: 650; letter-spacing: -0.2px; }
 .detailsGrid, .pricingGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
 .detailsGrid > div, .pricingGrid > div { min-width: 0; }
 .card label { color: #504a61; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
-.card input:not([type="file"]), .card select, .card textarea {
+.card input:not([type="file"]):not([type="checkbox"]), .card select, .card textarea {
   min-width: 0;
   min-height: 44px;
   padding: 11px 12px;
@@ -44,6 +44,7 @@
   transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 .card textarea { min-height: 116px; resize: vertical; line-height: 1.7; }
+.card input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
 .card input::placeholder, .card textarea::placeholder { color: #9a94a6; }
 .card input:not([type="file"]):hover, .card select:hover, .card textarea:hover { border-color: #bcb2cf; }
 .card input:focus, .card select:focus, .card textarea:focus {

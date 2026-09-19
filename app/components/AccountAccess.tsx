@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { accountColumns } from '@/lib/account';
 import s from "./account-access.module.css";
 
 type Mode = "login" | "forgot" | "update";
@@ -94,18 +95,18 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
         if (error || !auth.user) { setError("Email sau parolă incorectă. Verifică și confirmarea adresei de email."); return; }
         // B2B approval remains a separate requirement from password authentication.
         const { data: profile, error: profileError } = await supabase.from("utilizatori")
-          .select("id,nume_complet,email,rol,status")
-          .eq("email", auth.user.email ?? email.trim()).abortSignal(AbortSignal.timeout(15000)).maybeSingle();
-        if (profileError || !profile || profile.status !== "approved") {
+          .select(accountColumns)
+          .eq("auth_user_id", auth.user.id).abortSignal(AbortSignal.timeout(15000)).maybeSingle();
+        if (profileError || !profile || !["approved", "pending"].includes(profile.status)) {
           await supabase.auth.signOut({ scope: "local" });
           localStorage.removeItem("user_session"); localStorage.removeItem("admin_authenticated");
           setError(profile?.status === "pending" ? "Contul este în curs de verificare. Vei putea intra după aprobare." : "Accesul la cont nu este disponibil. Contactează echipa ToyLogix."); return;
         }
         localStorage.setItem("user_session", JSON.stringify(profile));
-        if (profile.rol === "admin") localStorage.setItem("admin_authenticated", "true");
-        else localStorage.removeItem("admin_authenticated");
+        localStorage.removeItem("admin_authenticated");
         window.dispatchEvent(new Event("toylogix-session"));
-        router.replace(profile.rol === "admin" ? "/admin" : "/store");
+        // Pending partners can complete their own billing details, but not enter the catalog.
+        router.replace(profile.status === "pending" ? "/account" : profile.rol === "admin" ? "/admin" : "/store");
       }
     } catch { setError("Conexiunea a fost întreruptă. Încearcă din nou."); }
     finally { setBusy(false); }

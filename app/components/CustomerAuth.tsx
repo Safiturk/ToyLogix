@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import AccountAccess from './AccountAccess';
 import { supabase } from "@/lib/supabase";
 import s from "../customer.module.css";
 
@@ -20,18 +20,12 @@ function PasswordToggle({ visible, toggle, controls }: { visible: boolean; toggl
   </button>;
 }
 
-async function hashPassword(value: string) {
-  const bytes = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
 
 export default function CustomerAuth({
   register = false,
 }: {
   register?: boolean;
 }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [telefon, setTelefon] = useState("");
   const [name, setName] = useState("");
@@ -99,27 +93,10 @@ export default function CustomerAuth({
         if (account.user.identities?.length === 0) {
           setMessage("Verifică emailul sau folosește recuperarea parolei dacă ai deja un cont."); return;
         }
-        const { error } = await supabase.from("utilizatori").insert([
-          {
-            nume_complet: name.trim(),
-            email: email.trim(),
-            telefon: telefon.trim(),
-            // Compatibility with a required legacy column; never store the Auth password here.
-            parola: await hashPassword(crypto.randomUUID()),
-            nume_firma: company.trim() || null,
-            status: "pending",
-            rol: "user",
-          },
-        ]);
+        // Profile creation is atomic with Auth signup via the database trigger.
         await supabase.auth.signOut({ scope: "local" });
-        if (error) {
-          setMessage(
-            error.code === "23505"
-              ? "Există deja un cont cu aceste date. Încercați să vă autentificați."
-              : "Cererea nu a putut fi trimisă. Verificați conexiunea și încercați din nou.",
-          );
-          return;
-        }
+        localStorage.removeItem('user_session'); localStorage.removeItem('admin_authenticated');
+        window.dispatchEvent(new Event('toylogix-session'));
         // Keep the existing notification integration. A notification failure must not prompt a duplicate registration.
         setNeedsEmailConfirmation(!account.session);
         setSuccess(true);
@@ -141,50 +118,6 @@ export default function CustomerAuth({
         } catch {
           /* The registration already succeeded. */
         }
-      } else {
-        // Preserve the existing email + phone login and session keys used by the admin.
-        const { data, error } = await supabase
-          .from("utilizatori")
-          .select("*")
-          .eq("email", email.trim())
-          .eq("telefon", telefon.trim())
-          .abortSignal(AbortSignal.timeout(15000))
-          .maybeSingle();
-        if (error) {
-          setMessage(
-            "Conectarea nu este disponibilă momentan. Încercați din nou în câteva momente.",
-          );
-          return;
-        }
-        if (!data) {
-          setMessage(
-            "Nu am găsit un cont cu această adresă de email și acest număr de telefon. Folosiți datele exacte de la înregistrare.",
-          );
-          return;
-        }
-        const passwordHash = await hashPassword(password.trim());
-        // Existing accounts may still contain the old plain value; new registrations always use a hash.
-        if (data.parola !== passwordHash && data.parola !== password.trim()) {
-          setMessage("Parola introdusă este incorectă.");
-          return;
-        }
-        if (data.status === "pending") {
-          setMessage(
-            "Contul dumneavoastră este în curs de verificare. Veți putea intra după aprobarea cererii.",
-          );
-          return;
-        }
-        if (data.status === "rejected") {
-          setMessage(
-            "Cererea de înregistrare nu a fost aprobată. Contactați echipa ToyLogix pentru clarificări.",
-          );
-          return;
-        }
-        localStorage.setItem("user_session", JSON.stringify(data));
-        if (data.rol === "admin") {
-          localStorage.setItem("admin_authenticated", "true");
-          router.push("/admin");
-        } else router.push("/store");
       }
     } catch {
       setMessage(
@@ -194,6 +127,7 @@ export default function CustomerAuth({
       setLoading(false);
     }
   }
+  if (!register) return <AccountAccess mode="login" />;
   return (
     <main className={s.authPage}>
       <section className={s.authStory}>

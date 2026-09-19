@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { signOutAccount } from '@/lib/account';
 import { categorySlug } from "@/lib/category-path";
 import BarcodeScanner from "../components/BarcodeScanner";
 import CategoryDrawer from "../components/CategoryDrawer";
@@ -480,22 +481,21 @@ export default function Storefront({
           <nav className={s.navigation} aria-label="Navigare principală">
             {user ? (
               <div className={s.accountControls}>
-                <div className={s.accountBadge}>
+                <Link href="/account" className={s.accountBadge} aria-label="Contul meu">
                   <span className={s.accountAvatar} aria-hidden="true">{(user.nume_complet || "Partener").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("ro")}</span>
                   <div className={s.accountIdentity}>
                     <span className={s.userName} title={user.nume_complet}>{user.nume_complet || "Partener"}</span>
                     <small>{user.rol === "admin" ? "Administrator" : "Partener ToyLogix"}</small>
                   </div>
-                </div>
+                </Link>
                 {user.rol === "admin" && <Link className={`${s.headerAction} ${s.adminAction}`} href="/admin">Admin Panel <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" /></svg></Link>}
                 <button
                   className={`${s.headerAction} ${s.logoutAction}`}
                   aria-label="Ieșire din cont"
                   title="Ieșire din cont"
-                  onClick={() => {
-                    localStorage.removeItem("user_session");
-                    localStorage.removeItem("admin_authenticated");
-                    window.dispatchEvent(new Event("toylogix-session"));
+                  onClick={async () => {
+                    await signOutAccount();
+                    router.replace('/login');
                   }}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M10 12h11m-4-4 4 4-4 4" /></svg>

@@ -8,6 +8,8 @@ import BarcodeScanner from '../components/BarcodeScanner';
 import formStyles from './product-form.module.css';
 import OnlinePanel from './OnlinePanel';
 import wings from './wings.module.css';
+import { currentAccount, accountColumns, signOutAccount } from '@/lib/account';
+import CustomerDetails from './CustomerDetails';
 
 interface Produs {
   id?: number;
@@ -32,7 +34,7 @@ interface Utilizator {
   nume_complet: string;
   email: string;
   telefon: string;
-  nume_firma?: string;
+  nume_firma?: string | null;
   status: 'pending' | 'approved' | 'rejected';
   rol: 'user' | 'admin';
 }
@@ -46,7 +48,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<Utilizator | null>(null);
+  const [detailUser, setDetailUser] = useState<Utilizator | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
 
@@ -75,24 +78,19 @@ export default function AdminDashboard() {
   const [form, setForm] = useState<Produs>(initialFormState);
 
   useEffect(() => {
-    const auth = localStorage.getItem('admin_authenticated');
-    const session = localStorage.getItem('user_session');
-
-    if (session) {
-      try {
-        setCurrentUser(JSON.parse(session));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    if (auth !== 'true') {
-      router.push('/login');
-    } else {
-      fetchProduse();
-      fetchUsers();
-    }
-  }, []);
+    let active = true;
+    void currentAccount().then(async (profile) => {
+      if (!active) return;
+      if (!profile || profile.rol !== 'admin' || profile.status !== 'approved') { router.replace('/store'); return; }
+      setCurrentUser(profile);
+      const [products, accounts] = await Promise.all([
+        supabase.from('produse').select('*').order('id', { ascending: false }),
+        supabase.from('utilizatori').select(accountColumns).order('id', { ascending: false }),
+      ]);
+      if (active) { setProduse(products.data || []); setUsers((accounts.data || []) as Utilizator[]); }
+    }).catch(() => { if (active) router.replace('/login'); });
+    return () => { active = false; };
+  }, [router]);
 
   const fetchProduse = async () => {
     const { data, error } = await supabase
@@ -107,13 +105,14 @@ export default function AdminDashboard() {
   const fetchUsers = async () => {
     const { data } = await supabase
       .from('utilizatori')
-      .select('*')
+      .select(accountColumns)
       .order('id', { ascending: false });
     if (data) setUsers(data);
   };
 
   const handleUpdateUserStatus = async (id: number, status: 'approved' | 'rejected') => {
     const { error } = await supabase.from('utilizatori').update({ status }).eq('id', id);
+    if (error) { alert('Modificarea nu a fost salvată. Verifică permisiunile și conexiunea.'); return; }
     if (!error) {
       alert(`Utilizatorul a fost ${status === 'approved' ? 'Aprobat' : 'Respins'}!`);
       fetchUsers();
@@ -144,6 +143,7 @@ export default function AdminDashboard() {
 
     const newRole = user.rol === 'admin' ? 'user' : 'admin';
     const { error } = await supabase.from('utilizatori').update({ rol: newRole }).eq('id', user.id);
+    if (error) { alert('Rolul nu a fost modificat. Numai un administrator autorizat poate schimba accesul.'); return; }
     if (!error) {
       alert(`Rolul utilizatorului a fost schimbat în: ${newRole.toUpperCase()}`);
       fetchUsers();
@@ -305,9 +305,9 @@ export default function AdminDashboard() {
               Magazin
             </Link>
             <button
-              onClick={() => {
-                localStorage.clear();
-                router.push('/login');
+              onClick={async () => {
+                await signOutAccount();
+                router.replace('/login');
               }}
               className="px-3.5 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition border border-rose-200/60"
             >
@@ -364,7 +364,7 @@ export default function AdminDashboard() {
                 <tbody className="divide-y">
                   {pendingUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-slate-50">
-                      <td className="p-3 font-bold">{u.nume_complet}</td>
+                      <td className="p-3 font-bold"><button type="button" className="text-violet-700 hover:underline" onClick={() => setDetailUser(u)}>{u.nume_complet}</button></td>
                       <td className="p-3 font-mono">{u.telefon}</td>
                       <td className="p-3">{u.email}</td>
                       <td className="p-3">{u.nume_firma || '-'}</td>
@@ -429,10 +429,10 @@ export default function AdminDashboard() {
                   </thead>
                   <tbody className="divide-y">
                     {approvedUsers.map((u) => {
-                      const isSelf = currentUser && currentUser.email === u.email;
+                      const isSelf = currentUser?.email === u.email;
                       return (
                         <tr key={u.id} className="hover:bg-slate-50">
-                          <td className="p-3 font-bold text-slate-900">{u.nume_complet}</td>
+                          <td className="p-3 font-bold text-slate-900"><button type="button" className="text-violet-700 hover:underline text-left" onClick={() => setDetailUser(u)}>{u.nume_complet}<span className="block text-[10px] font-normal text-slate-500">Vezi datele clientului →</span></button></td>
                           <td className="p-3">
                             <div>{u.email}</div>
                             <div className="text-slate-400 font-mono text-[11px]">{u.telefon}</div>
@@ -855,6 +855,7 @@ export default function AdminDashboard() {
       <div className={wings.right} aria-hidden="true" />
       </div>
 
+      {detailUser && <CustomerDetails user={detailUser} close={() => setDetailUser(null)} />}
       {showScanner && (
         <BarcodeScanner
           onScanSuccess={(scannedCode: string) => {
