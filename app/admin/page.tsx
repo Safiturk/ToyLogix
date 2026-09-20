@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import BrandLogo from '../components/BrandLogo';
 import BarcodeScanner from '../components/BarcodeScanner';
 import formStyles from './product-form.module.css';
 import OnlinePanel from './OnlinePanel';
@@ -285,7 +284,9 @@ export default function AdminDashboard() {
         {/* HEADER */}
         <header className="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <Link href="/store" className="flex items-center gap-3 group">
-            <BrandLogo />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-black text-2xl shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform">
+              T
+            </div>
             <div>
               <h1 className="text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">Panou de Administrare</h1>
               <p className="text-xs text-slate-500 font-medium">ToyLogix Store &bull; Click logo pentru a reveni la Magazin</p>
