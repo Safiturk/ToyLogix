@@ -5,17 +5,17 @@
   "start_url": "/store",
   "display": "standalone",
   "background_color": "#0f172a",
-  "theme_color": "#2563eb",
+  "theme_color": "#6546c8",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3081/3081559.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/toylogix-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3081/3081559.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "/toylogix-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ]
 }

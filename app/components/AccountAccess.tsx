@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { accountColumns } from '@/lib/account';
 import s from "./account-access.module.css";
+import BrandLogo from "./BrandLogo";
 
 type Mode = "login" | "forgot" | "update";
 
@@ -114,7 +115,7 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
 
   const title = mode === "login" ? "Bine ai revenit." : mode === "forgot" ? "Ai uitat parola?" : "O parolă nouă.";
   return <main className={s.page}>
-    <header className={s.header}><Link className={s.logo} href="/store">ToyLogix<span>·</span><small>PARTNER PORTAL</small></Link><span>Jucării & distribuție B2B</span></header>
+    <header className={s.header}><BrandLogo className={s.logo} subtitle="PARTNER PORTAL" /><span>Jucării & distribuție B2B</span></header>
     <div className={s.layout}>
       <section className={s.story}>
         <span className={s.eyebrow}>UN PARTENERIAT. NOI POSIBILITĂȚI.</span>

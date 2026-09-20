@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import AccountAccess from './AccountAccess';
+import BrandLogo from './BrandLogo';
 import { supabase } from "@/lib/supabase";
 import s from "../customer.module.css";
 
@@ -131,14 +132,7 @@ export default function CustomerAuth({
   return (
     <main className={s.authPage}>
       <section className={s.authStory}>
-        <Link href="/store" className={s.logo}>
-          <span className={s.logoMark}>
-            T<span>·</span>
-          </span>
-          <span>
-            ToyLogix<small>JUCĂRII & DISTRIBUȚIE B2B</small>
-          </span>
-        </Link>
+        <BrandLogo className={s.logo} />
         <div>
           <span className={s.eyebrow}>PARTENERI ÎN LUMEA JOCULUI</span>
           <h1>

@@ -14,6 +14,7 @@ import { categorySlug } from "@/lib/category-path";
 import BarcodeScanner from "../components/BarcodeScanner";
 import FilterDrawer from "../components/FilterDrawer";
 import CategoryDrawer from "../components/CategoryDrawer";
+import BrandLogo from "../components/BrandLogo";
 import s from "../customer.module.css";
 import { useCatalogTheme } from "./useCatalogTheme";
 import { useWishlistMotion } from "./useWishlistMotion";
@@ -551,14 +552,7 @@ export default function Storefront({
       <header className={s.header}>
         <div className={s.headerInner}>
           <div className={s.brandNavigation}>
-            <Link href="/store" className={s.logo}>
-              <span className={s.logoMark}>
-                T<span>·</span>
-              </span>
-              <span>
-                ToyLogix<small>JUCĂRII & DISTRIBUȚIE B2B</small>
-              </span>
-            </Link>
+            <BrandLogo className={s.logo} />
             <button
               className={s.hamburger}
               aria-label="Deschide categoriile"

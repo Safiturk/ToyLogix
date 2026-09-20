@@ -4,8 +4,8 @@
 .confirmationIcon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; margin-top: 28px; background: #f0eafa; color: #6546c8; font-size: 28px; }
 .page a { text-decoration: none; }
 .header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 32px 0; border-bottom: 1px solid #e8e4ef; }
-.logo { font-size: 27px; font-weight: 750; letter-spacing: -1px; color: var(--ink); }
-.logo > span { color: var(--purple); }
+.logo { display: flex; align-items: center; gap: 12px; font-size: 27px; font-weight: 750; letter-spacing: -1px; color: var(--ink); }
+.logo img { display: block; width: 190px; height: auto; }
 .logo small { display: inline-block; font-size: 9px; letter-spacing: 1.6px; font-weight: 500; margin-left: 18px; color: #81798f; }
 .header > span { color: #81798f; font-size: 11px; }
 .layout { width: 100%; max-width: 1160px; margin: auto; padding: 64px 0; display: grid; grid-template-columns: 1fr minmax(0, 450px); gap: 9%; align-items: center; }
@@ -52,5 +52,5 @@
 .spinner { width: 15px; height: 15px; border: 2px solid #ffffff50; border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 800px) { .layout { grid-template-columns: minmax(0,450px); justify-content: center; padding: 36px 0; } .story { display: none; } .header > span { display: none; } .card { padding: 28px 24px; } }
-@media (max-width: 400px) { .logo small { display: block; margin: 6px 0 0; } .card h2 { font-size: 26px; } }
+@media (max-width: 400px) { .logo img { width: 154px; } .logo small { display: block; margin: 6px 0 0; } .card h2 { font-size: 26px; } }
 @media (prefers-reduced-motion: reduce) { .page * { animation: none !important; transition: none !important; } .submit:hover, .submit:active { transform: none; } }

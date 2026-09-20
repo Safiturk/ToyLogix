@@ -66,6 +66,11 @@
   line-height: 1.1;
   color: var(--ink);
 }
+.logo img {
+  display: block;
+  width: 188px;
+  height: auto;
+}
 .logo small {
   display: block;
   font-size: 8px;
@@ -1827,6 +1832,7 @@
 @media (max-width: 420px) {
   .headerInner { padding-inline: 16px; }
   .headerInner .logo { font-size: 21px; }
+  .headerInner .logo img { width: 154px; }
   .headerInner .logo small, .headerInner .logoMark { display: none; }
   .headerInner .brandNavigation { gap: 8px; }
   .headerInner .logoutAction { padding: 6px; }

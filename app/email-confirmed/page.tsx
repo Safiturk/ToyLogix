@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import s from "../components/account-access.module.css";
+import BrandLogo from "../components/BrandLogo";
 
 type Status = "checking" | "confirmed" | "invalid" | "unavailable";
 export default function EmailConfirmedPage() {
@@ -34,7 +35,7 @@ export default function EmailConfirmedPage() {
   }, []);
 
   return <main className={s.page}>
-    <header className={s.header}><Link className={s.logo} href="/login">ToyLogix<span>·</span><small>PARTNER PORTAL</small></Link></header>
+    <header className={s.header}><BrandLogo className={s.logo} href="/login" subtitle="PARTNER PORTAL" /></header>
     <div className={s.confirmationLayout}>
       <section className={s.card} aria-labelledby="confirmation-title" aria-busy={state === "checking"}>
         <span className={s.eyebrow}>CONFIRMAREA ADRESEI DE EMAIL</span>
