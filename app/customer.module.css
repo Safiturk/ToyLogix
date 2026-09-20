@@ -1787,6 +1787,11 @@
 .favoriteButton[aria-pressed="true"] { color: var(--purple); background: #f4edff; }
 .detailFavorite { margin: 12px 0; gap: 9px; }
 .detailFavorite[aria-pressed="true"] { color: var(--purple); background: #f4edff; border-color: #cbbce8; }
+.detailFavorite svg { transform-box: fill-box; transform-origin: center; }
+.wishlistFlight { position: fixed; z-index: 200; width: 56px; height: 56px; display: grid; place-items: center; padding: 5px; border-radius: 12px; background: white; color: #6546c8; box-shadow: 0 5px 20px #24213b26; pointer-events: none; font-size: 26px; will-change: transform, opacity; }
+.wishlistFlight img { width: 100%; height: 100%; object-fit: contain; }
+.favoriteToast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1; max-width: calc(100% - 32px); width: max-content; padding: 12px 20px; border-radius: 12px; background: var(--ink); color: #fff; box-shadow: 0 6px 24px #0003; font-size: 14px; pointer-events: none; }
+.dark .favoriteToast { background: #ece5ff; color: #241b35; }
 .categoryTag { background: #f0eafa; color: var(--purple); font-weight: 800; letter-spacing: .5px; max-width: calc(100% - 65px); }
 .categoryPage .cardImage { aspect-ratio: 1; height: auto; background: #fff; padding: 42px 18px 14px; }
 .categoryPage .cardBody { padding: 14px; }

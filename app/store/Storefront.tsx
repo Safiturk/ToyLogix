@@ -16,6 +16,7 @@ import FilterDrawer from "../components/FilterDrawer";
 import CategoryDrawer from "../components/CategoryDrawer";
 import s from "../customer.module.css";
 import { useCatalogTheme } from "./useCatalogTheme";
+import { useWishlistMotion } from "./useWishlistMotion";
 
 interface Product {
   id: number;
@@ -160,11 +161,18 @@ function Details({
   product: Product;
   close: () => void;
   isFavorite: boolean;
-  toggleFavorite: () => void;
+  toggleFavorite: () => boolean | null;
   favoriteError: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [index, setIndex] = useState(0);
+  const [toast, setToast] = useState<{ message: string } | null>(null);
+  const { bounce } = useWishlistMotion();
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(null), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
   const gallery = images(p);
   useEffect(() => {
     const dialog = ref.current;
@@ -233,12 +241,20 @@ function Details({
             <button
               className={`${s.secondary} ${s.detailFavorite}`}
               aria-pressed={isFavorite}
-              onClick={toggleFavorite}
+              onClick={(event) => {
+                const added = toggleFavorite();
+                if (added === null) { setToast(null); return; }
+                bounce(event.currentTarget.querySelector("svg"));
+                setToast({ message: added ? "Adăugat la favorite" : "Eliminat din favorite" });
+              }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" /></svg>
               {isFavorite ? "Elimină din favorite" : "Adaugă la favorite"}
             </button>
             {favoriteError && <p role="alert" className={s.priceWarning}>{favoriteError}</p>}
+            <div role="status" aria-live="polite" aria-atomic="true" className={toast ? s.favoriteToast : undefined}>
+              {toast?.message}
+            </div>
             <span
               className={Number(p.stoc_actual) > 0 ? s.inStock : s.outOfStock}
             >
@@ -326,19 +342,29 @@ export default function Storefront({
     } catch { return []; }
   })();
   const [favoriteError, setFavoriteError] = useState("");
+  const wishlistIcon = useRef<HTMLSpanElement>(null);
+  const wishlistBadge = useRef<HTMLElement>(null);
+  const { fly, cancel: cancelWishlistMotion } = useWishlistMotion();
   const toggleFavorite = (id: number) => {
     try {
-      const next = favorites.includes(id) ? favorites.filter((value) => value !== id) : [...favorites, id];
+      const stored: unknown = JSON.parse(localStorage.getItem(favoritesKey) || "[]");
+      const current: number[] = Array.isArray(stored) ? stored.filter((value): value is number => typeof value === "number") : [];
+      const added = !current.includes(id);
+      const next = added ? [...current, id] : current.filter((value) => value !== id);
       localStorage.setItem(favoritesKey, JSON.stringify(next));
       window.dispatchEvent(new Event("toylogix-session"));
       setFavoriteError("");
-    } catch { setFavoriteError("Favoritele nu pot fi salvate. Permite stocarea locală în browser."); }
+      return added;
+    } catch { setFavoriteError("Favoritele nu pot fi salvate. Permite stocarea locală în browser."); return null; }
   };
   useEffect(() => {
     if (session !== undefined && !parseSession(session))
       router.replace("/login");
   }, [router, session]);
   const [selected, setSelected] = useState<Product | null>(null);
+  useEffect(() => {
+    if (selected || favoritesOpen) cancelWishlistMotion();
+  }, [selected, favoritesOpen, cancelWishlistMotion]);
   const [scanner, setScanner] = useState(false);
   const load = useCallback(async (unmountSignal?: AbortSignal) => {
     const controller = new AbortController();
@@ -584,7 +610,7 @@ export default function Storefront({
                     {theme === "dark" ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></> : <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" />}
                   </svg>
                 </button>
-                <button className={s.wishlistLink} aria-haspopup="dialog" aria-expanded={favoritesOpen} aria-controls="favorites-dialog" onClick={() => setFavoritesOpen(true)}><span aria-hidden="true">♡</span> Favorite <b>{favorites.length}</b></button>
+                <button className={s.wishlistLink} aria-haspopup="dialog" aria-expanded={favoritesOpen} aria-controls="favorites-dialog" onClick={() => setFavoritesOpen(true)}><span ref={wishlistIcon} aria-hidden="true">♡</span> Favorite <b ref={wishlistBadge}>{favorites.length}</b></button>
                 <Link href="/account" className={s.accountBadge} aria-label="Contul meu">
                   <span className={s.accountAvatar} aria-hidden="true">{(user.nume_complet || "Partener").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("ro")}</span>
                   <div className={s.accountIdentity}>
@@ -822,7 +848,12 @@ export default function Storefront({
                 <div className={s.grid}>
                   {pageProducts.map((p) => (
                     <article key={p.id} className={s.card}>
-                      <button className={s.favoriteButton} aria-label={`${favorites.includes(p.id) ? "Elimină din" : "Adaugă la"} favorite: ${p.nume_produs}`} aria-pressed={favorites.includes(p.id)} onClick={() => toggleFavorite(p.id)}>
+                      <button className={s.favoriteButton} aria-label={`${favorites.includes(p.id) ? "Elimină din" : "Adaugă la"} favorite: ${p.nume_produs}`} aria-pressed={favorites.includes(p.id)} onClick={(event) => {
+                        const added = toggleFavorite(p.id);
+                        if (!added) { cancelWishlistMotion(); return; }
+                        const source = event.currentTarget.closest("article")?.querySelector<HTMLElement>(`.${s.cardImage}`);
+                        if (source) fly(source, wishlistIcon.current, wishlistBadge.current);
+                      }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill={favorites.includes(p.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" /></svg>
                       </button>
                       <button className={s.productOpen} onClick={() => setSelected(p)} aria-label={`Vezi detalii: ${p.nume_produs}`}>
