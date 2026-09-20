@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import BrandLogo from "./BrandLogo";
 import AccountAccess from './AccountAccess';
 import { supabase } from "@/lib/supabase";
 import s from "../customer.module.css";
@@ -132,12 +133,7 @@ export default function CustomerAuth({
     <main className={s.authPage}>
       <section className={s.authStory}>
         <Link href="/store" className={s.logo}>
-          <span className={s.logoMark}>
-            T<span>·</span>
-          </span>
-          <span>
-            ToyLogix<small>JUCĂRII & DISTRIBUȚIE B2B</small>
-          </span>
+          <BrandLogo />
         </Link>
         <div>
           <span className={s.eyebrow}>PARTENERI ÎN LUMEA JOCULUI</span>

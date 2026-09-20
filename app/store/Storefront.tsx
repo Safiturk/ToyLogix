@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import Link from "next/link";
+import BrandLogo from "../components/BrandLogo";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { signOutAccount } from '@/lib/account';
@@ -526,12 +527,7 @@ export default function Storefront({
         <div className={s.headerInner}>
           <div className={s.brandNavigation}>
             <Link href="/store" className={s.logo}>
-              <span className={s.logoMark}>
-                T<span>·</span>
-              </span>
-              <span>
-                ToyLogix<small>JUCĂRII & DISTRIBUȚIE B2B</small>
-              </span>
+              <BrandLogo />
             </Link>
             <button
               className={s.hamburger}
@@ -954,7 +950,7 @@ export default function Storefront({
       </main>
       <footer className={s.footer}>
         <Link href="/store" className={s.footerLogo}>
-          ToyLogix<span>·</span>
+          <BrandLogo />
         </Link>
         <p>Jucării. Idei. Noi posibilități.</p>
         <nav aria-label="Navigare subsol">
