@@ -24,6 +24,7 @@ import {
 } from "@/lib/catalog";
 import ProductPicture from "./ProductPicture";
 import FavoritesDialog from "./FavoritesDialog";
+import MobileAccountMenu from "./MobileAccountMenu";
 import ProductDetails from "./ProductDetails";
 import { useStoreSession, parseStoreSession } from "./useStoreSession";
 import { useFavorites } from "./useFavorites";
@@ -303,6 +304,7 @@ export default function Storefront({
         <div className={s.headerInner}>
           <div className={s.brandNavigation}>
             <BrandLogo className={s.logo} />
+            <MobileAccountMenu name={user.nume_complet} isAdmin={user.rol === "admin"} />
             <button
               className={s.hamburger}
               aria-label="Deschide categoriile"

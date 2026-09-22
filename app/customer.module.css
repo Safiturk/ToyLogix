@@ -1890,6 +1890,7 @@
 .dark .logoMark { background: #7855d6; }
 .dark .logo img { filter: brightness(0) invert(1); }
 /* Phone header: centered brand, full-width search, then a compact action row. */
+.mobileAccountMenu { display: none; }
 @media (max-width: 767px) {
   .headerInner {
     position: relative;
@@ -1944,29 +1945,28 @@
   .headerInner .accountControls {
     width: 100%;
     min-width: 0;
-    display: flex;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
     align-items: center;
-    justify-content: space-between;
     gap: 6px;
   }
   .headerInner .accountBadge {
-    position: absolute;
-    top: 14px;
-    right: 16px;
-    width: 44px;
-    height: 44px;
-    justify-content: center;
-    margin: 0;
-    padding: 0;
-    border: 0;
+    display: none;
   }
+  .mobileAccountMenu { display: block; position: relative; grid-column: 3; grid-row: 1; justify-self: end; }
+  .mobileAccountTrigger { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; list-style: none; }
+  .mobileAccountTrigger::-webkit-details-marker { display: none; }
+  .mobileAccountDropdown { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: 190px; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 28px #24213b26; }
+  .mobileAccountDropdown a { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 10px 12px; border-radius: 8px; color: var(--ink); font-size: 13px; font-weight: 600; }
+  .mobileAccountDropdown a:hover, .mobileAccountDropdown a:focus-visible { background: #f0edf6; }
+  .dark .mobileAccountDropdown { background: #252030; }
+  .dark .mobileAccountDropdown a:hover, .dark .mobileAccountDropdown a:focus-visible { background: #382c50; }
   .headerInner .accountIdentity { display: none; }
   .headerInner .themeToggle, .headerInner .logoutAction { width: 44px; height: 44px; flex: 0 0 44px; padding: 0; }
-  .headerInner .wishlistLink { min-height: 44px; font-size: 12px; gap: 4px; }
+  .headerInner .wishlistLink { justify-self: center; min-height: 44px; font-size: 12px; gap: 4px; }
   .headerInner .wishlistLink > span { font-size: 24px; }
   .headerInner .wishlistLink b { padding: 3px 6px; font-size: 11px; }
-  .headerInner .adminAction { display: inline-flex; min-height: 44px; padding: 8px; gap: 4px; font-size: 11px; }
-  .headerInner .adminAction svg { width: 12px; height: 12px; }
+  .headerInner .adminAction { display: none; }
   .headerInner .logoutAction span { display: none; }
   .headerInner .navigation > a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; }
   .headerInner .navigation .primary { min-height: 44px; padding: 8px 12px; font-size: 12px; }
