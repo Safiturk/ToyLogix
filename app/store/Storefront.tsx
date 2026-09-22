@@ -43,6 +43,10 @@ export default function Storefront({
   const category =
     categoryName ?? (requestedSlug ? requestedSlug.replace(/-/g, " ") : "");
   const router = useRouter();
+  const logout = async () => {
+    await signOutAccount();
+    router.replace("/login");
+  };
   const { theme, toggleTheme } = useCatalogTheme();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -304,7 +308,16 @@ export default function Storefront({
         <div className={s.headerInner}>
           <div className={s.brandNavigation}>
             <BrandLogo className={s.logo} />
-            <MobileAccountMenu name={user.nume_complet} isAdmin={user.rol === "admin"} />
+            <MobileAccountMenu
+              name={user.nume_complet}
+              isAdmin={user.rol === "admin"}
+              favoriteCount={favorites.length}
+              favoritesOpen={favoritesOpen}
+              onOpenFavorites={() => setFavoritesOpen(true)}
+              isDark={theme === "dark"}
+              onToggleTheme={toggleTheme}
+              onLogout={logout}
+            />
             <button
               className={s.hamburger}
               aria-label="Deschide categoriile"
@@ -445,10 +458,7 @@ export default function Storefront({
                   className={`${s.headerAction} ${s.logoutAction}`}
                   aria-label="Ieșire din cont"
                   title="Ieșire din cont"
-                  onClick={async () => {
-                    await signOutAccount();
-                    router.replace("/login");
-                  }}
+                  onClick={logout}
                 >
                   <svg
                     width="18"
