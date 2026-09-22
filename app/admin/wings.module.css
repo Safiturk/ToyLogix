@@ -2,22 +2,22 @@
 .center { width: 100%; min-width: 0; }
 .left { width: 100%; max-width: 72rem; margin: 32px auto 0; }
 .right { display: none; }
-.panel { background: #fff; border: 1px solid #e9e6ef; border-radius: 16px; box-shadow: 0 4px 20px #24213b06; color: #24213b; overflow: hidden; }
-.panelHeader { padding: 22px 18px; border-bottom: 1px solid #eeeaf3; }
+.panel { background: #fff; border: 1px solid var(--admin-line, #dfe3e9); border-radius: 12px; box-shadow: 0 1px 2px #20273304; color: var(--admin-ink, #202733); overflow: hidden; }
+.panelHeader { padding: 22px 18px; border-bottom: 1px solid #e7eaf0; }
 .panelHeader h2 { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 650; }
-.panelHeader p { font-size: 11px; color: #817a90; margin: 8px 0 0 17px; }
+.panelHeader p { font-size: 11px; color: #647080; margin: 8px 0 0 17px; }
 .dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: #a8a3b2; }
 .live { background: #22a775; animation: pulse 2s ease-in-out infinite; }
 .list { list-style: none; margin: 0; padding: 4px 18px; max-height: 65vh; overflow-y: auto; }
-.list li { display: flex; gap: 10px; padding: 17px 0; border-bottom: 1px solid #f0edf5; }
+.list li { display: flex; gap: 10px; padding: 17px 0; border-bottom: 1px solid #edf0f3; }
 .list li:last-child { border: 0; }
 .list li > div { min-width: 0; }
-.avatar { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; background: #f0eafa; color: #6546c8; border-radius: 10px; font-size: 12px; }
+.avatar { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; background: #f0eafa; color: #6546c8; border-radius: 8px; font-size: 12px; }
 .list strong { font-size: 12px; font-weight: 600; }
-.list small { font-size: 10px; color: #817a90; font-weight: 400; }
-.list p { font-size: 11px; color: #716d81; overflow-wrap: anywhere; margin-top: 5px; }
-.empty { padding: 28px 18px; color: #817a90; font-size: 12px; line-height: 1.7; }
-.panelFooter { padding: 16px 18px; border-top: 1px solid #eeeaf3; font-size: 10px; color: #817a90; }
+.list small { font-size: 11px; color: #647080; font-weight: 400; }
+.list p { font-size: 11px; color: #647080; overflow-wrap: anywhere; margin-top: 5px; }
+.empty { padding: 28px 18px; color: #647080; font-size: 12px; line-height: 1.7; }
+.panelFooter { padding: 16px 18px; border-top: 1px solid #e7eaf0; font-size: 11px; color: #647080; }
 /* Equal wings keep the original 72rem center exactly centered. */
 @media (min-width: 1760px) {
   .layout { grid-template-columns: minmax(0, 1fr) 72rem minmax(0, 1fr); gap: 24px; }

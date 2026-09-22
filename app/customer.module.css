@@ -1888,6 +1888,89 @@
 .dark .logoutAction { color: var(--muted); }
 .dark .logoutAction:hover { background: #382735; color: #f1a8ba; }
 .dark .logoMark { background: #7855d6; }
+.dark .logo img { filter: brightness(0) invert(1); }
+/* Phone header: centered brand, full-width search, then a compact action row. */
+@media (max-width: 767px) {
+  .headerInner {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px 16px 12px;
+  }
+  .headerInner .brandNavigation {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+  .headerInner .logo { grid-column: 2; grid-row: 1; justify-self: center; gap: 0; }
+  .headerInner .logo img { width: clamp(132px, 38vw, 166px); max-width: 100%; height: auto; }
+  .headerInner .logo small { display: none; }
+  .headerInner .hamburger {
+    grid-column: 1;
+    grid-row: 1;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+  }
+  .headerInner .headerSearch {
+    grid-row: 2;
+    order: initial;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 8px 0 12px;
+    gap: 6px;
+    box-sizing: border-box;
+  }
+  .headerSearch input { flex: 1; width: 0; font-size: 16px; }
+  .headerSearch button { flex: 0 0 44px; min-height: 44px; }
+  .headerInner .navigation {
+    grid-row: 3;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    font-size: 12px;
+  }
+  .headerInner .accountControls {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .headerInner .accountBadge {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .headerInner .accountIdentity { display: none; }
+  .headerInner .themeToggle, .headerInner .logoutAction { width: 44px; height: 44px; flex: 0 0 44px; padding: 0; }
+  .headerInner .wishlistLink { min-height: 44px; font-size: 12px; gap: 4px; }
+  .headerInner .wishlistLink > span { font-size: 24px; }
+  .headerInner .wishlistLink b { padding: 3px 6px; font-size: 11px; }
+  .headerInner .adminAction { display: inline-flex; min-height: 44px; padding: 8px; gap: 4px; font-size: 11px; }
+  .headerInner .adminAction svg { width: 12px; height: 12px; }
+  .headerInner .logoutAction span { display: none; }
+  .headerInner .navigation > a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; }
+  .headerInner .navigation .primary { min-height: 44px; padding: 8px 12px; font-size: 12px; }
+}
 .favoritesTitle { font-size: 26px; font-weight: 750; margin: 5px 0; }
 .favoritesList { list-style: none; padding: 0; margin: 24px 0; display: grid; gap: 12px; }
 .favoriteItem { display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; }

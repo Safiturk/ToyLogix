@@ -8,6 +8,7 @@ import BarcodeScanner from '../components/BarcodeScanner';
 import formStyles from './product-form.module.css';
 import OnlinePanel from './OnlinePanel';
 import wings from './wings.module.css';
+import dashboard from './dashboard.module.css';
 import { currentAccount, accountColumns, signOutAccount } from '@/lib/account';
 import CustomerDetails from './CustomerDetails';
 
@@ -277,31 +278,31 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-indigo-50/20 to-purple-50/20 p-4 md:p-8 text-slate-800">
+    <div className={dashboard.page}>
       <div className={wings.layout}>
       <div className={`${wings.center} max-w-6xl mx-auto space-y-8`}>
         
         {/* HEADER */}
-        <header className="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <Link href="/store" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-black text-2xl shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform">
+        <header className={dashboard.header}>
+          <Link href="/store" className={dashboard.brand}>
+            <div className={dashboard.brandMark}>
               T
             </div>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors">Panou de Administrare</h1>
+              <h1 >Panou de Administrare</h1>
               <p className="text-xs text-slate-500 font-medium">ToyLogix Store &bull; Click logo pentru a reveni la Magazin</p>
             </div>
           </Link>
 
-          <div className="flex gap-2">
+          <div className={dashboard.actions}>
             <button
               onClick={exportToExcel}
               disabled={exporting || produse.length === 0}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+              className={dashboard.action}
             >
               {exporting ? 'Se pregătește…' : '📊 Raport Excel'}
             </button>
-            <Link href="/store" className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm">
+            <Link href="/store" className={`${dashboard.action} ${dashboard.primary}`}>
               Magazin
             </Link>
             <button
@@ -309,7 +310,7 @@ export default function AdminDashboard() {
                 await signOutAccount();
                 router.replace('/login');
               }}
-              className="px-3.5 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition border border-rose-200/60"
+              className={`${dashboard.action} ${dashboard.exit}`}
             >
               Ieșire Admin
             </button>
@@ -317,18 +318,18 @@ export default function AdminDashboard() {
         </header>
 
         {/* İSTATİSTİK KARTLARI */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
+        <section className={dashboard.stats}>
+          <div className={dashboard.stat}>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Produse</span>
             <div className="text-2xl font-black text-slate-900">{produse.length} tipuri</div>
           </div>
           
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
+          <div className={dashboard.stat}>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bucăți în Stoc</span>
             <div className="text-2xl font-black text-indigo-600">{formatRON(totalStockItems)} buc</div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
+          <div className={dashboard.stat}>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Valoare Inventar (B2B)</span>
             <div className="text-2xl font-black text-emerald-600">{formatRON(totalEngrosValue)} RON</div>
             <span className="text-[10px] text-slate-400 block font-medium">
@@ -336,7 +337,7 @@ export default function AdminDashboard() {
             </span>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
+          <div className={dashboard.stat}>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stoc Critic</span>
             <div className={`text-2xl font-black ${criticalStockProducts.length > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
               {criticalStockProducts.length} produse
@@ -346,7 +347,7 @@ export default function AdminDashboard() {
 
         {/* ONAY BEKLEYEN KULLANICILAR */}
         {pendingUsers.length > 0 && (
-          <section className="bg-amber-50/80 border border-amber-200 p-6 rounded-3xl shadow-sm space-y-4">
+          <section className={`${dashboard.section} ${dashboard.pending}`}>
             <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2">
               ⏳ Solicitări Înregistrare Noi ({pendingUsers.length})
             </h2>
@@ -391,12 +392,12 @@ export default function AdminDashboard() {
         )}
 
         {/* AÇILIR / KAPANIR KAYITLI KULLANICILAR TABLOSU (ACCORDION) */}
-        <section className="bg-white/80 backdrop-blur-md rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden transition-all duration-300">
+        <section className={`${dashboard.section} ${dashboard.accordion}`}>
           
           {/* Başlık Barı (Tıklanınca Açılır/Kapanır) */}
           <div
             onClick={() => setIsUserTableOpen(!isUserTableOpen)}
-            className="p-6 flex justify-between items-center cursor-pointer hover:bg-slate-50/50 transition-colors select-none"
+            className={dashboard.accordionHeader}
           >
             <div className="flex items-center gap-3">
               <span className="text-xl">👥</span>
@@ -783,7 +784,7 @@ export default function AdminDashboard() {
         </section>
 
         {/* ÜRÜN LİSTESİ TABLOSU */}
-        <section className="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+        <section className={`${dashboard.section} ${dashboard.inventory}`}>
           <h2 className="text-xl font-bold text-slate-800">Inventar Produse ({produse.length})</h2>
 
           <div className="overflow-x-auto">
