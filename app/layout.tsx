@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   applicationName: "ToyLogix",
   icons: {
+    icon: [{ url: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: {
