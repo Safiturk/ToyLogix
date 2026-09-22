@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import LivePresence from "./components/LivePresence";
 
@@ -6,7 +6,19 @@ export const metadata: Metadata = {
   title: "ToyLogix - Sistem",
   description: "Gestiune stocuri și magazin",
   manifest: "/manifest.json",
-  themeColor: "#2563eb",
+  applicationName: "ToyLogix",
+  icons: {
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "ToyLogix",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#6546c8",
 };
 
 export default function RootLayout({
@@ -16,11 +28,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ro">
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/toylogix-logo.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/toylogix-logo.svg" />
-      </head>
       <body>
         <LivePresence>{children}</LivePresence>
       </body>
