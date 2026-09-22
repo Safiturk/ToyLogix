@@ -11,8 +11,12 @@ function snapshot(): Theme {
   try {
     const saved = localStorage.getItem(key);
     if (saved === "light" || saved === "dark") return saved;
-  } catch { /* Private browsing can disable storage. */ }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  } catch {
+    /* Private browsing can disable storage. */
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 function subscribe(update: () => void) {
@@ -28,13 +32,19 @@ function subscribe(update: () => void) {
 }
 
 export function useCatalogTheme() {
-  const theme = useSyncExternalStore(subscribe, snapshot, () => "light" as const);
+  const theme = useSyncExternalStore(
+    subscribe,
+    snapshot,
+    () => "light" as const,
+  );
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
     try {
       localStorage.setItem(key, next);
       temporaryTheme = null;
-    } catch { temporaryTheme = next; }
+    } catch {
+      temporaryTheme = next;
+    }
     window.dispatchEvent(new Event("toylogix-theme"));
   };
   return { theme, toggleTheme };

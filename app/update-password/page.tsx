@@ -1,2 +1,4 @@
 import AccountAccess from "../components/AccountAccess";
-export default function UpdatePasswordPage() { return <AccountAccess mode="update" />; }
+export default function UpdatePasswordPage() {
+  return <AccountAccess mode="update" />;
+}

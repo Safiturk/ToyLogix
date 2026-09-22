@@ -7,15 +7,25 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type Visitor = { id: string; pathname: string };
 type Snapshot = { visitors: Visitor[]; connected: boolean };
-const PresenceContext = createContext<Snapshot>({ visitors: [], connected: false });
+const PresenceContext = createContext<Snapshot>({
+  visitors: [],
+  connected: false,
+});
 export const useLivePresence = () => useContext(PresenceContext);
 
 // Public room: intentionally exclude names, emails, account IDs and session data.
-export default function LivePresence({ children }: { children: React.ReactNode }) {
+export default function LivePresence({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pathRef = useRef(pathname);
-  const [snapshot, setSnapshot] = useState<Snapshot>({ visitors: [], connected: false });
+  const [snapshot, setSnapshot] = useState<Snapshot>({
+    visitors: [],
+    connected: false,
+  });
 
   useEffect(() => {
     pathRef.current = pathname;
@@ -33,29 +43,43 @@ export default function LivePresence({ children }: { children: React.ReactNode }
     });
     channelRef.current = channel;
     const track = () => {
-      if (!disposed && channel.state === "joined" && !pathRef.current.startsWith("/admin")) {
+      if (
+        !disposed &&
+        channel.state === "joined" &&
+        !pathRef.current.startsWith("/admin")
+      ) {
         void channel.track({ pathname: pathRef.current });
       }
     };
-    channel.on("presence", { event: "sync" }, () => {
-      if (disposed) return;
-      const visitors = Object.entries(channel.presenceState<{ pathname?: unknown }>())
-        .flatMap(([id, entries]) => {
-          const path = entries.at(-1)?.pathname;
-          return typeof path === "string" && path.startsWith("/") && !path.startsWith("/admin")
-            ? [{ id, pathname: path.slice(0, 300) }] : [];
-        }).sort((a, b) => a.id.localeCompare(b.id));
-      setSnapshot({ visitors, connected: true });
-    }).subscribe((status) => {
-      if (disposed) return;
-      if (status === "SUBSCRIBED") {
-        setSnapshot((current) => ({ ...current, connected: true }));
-        track();
-      } else {
-        setSnapshot({ visitors: [], connected: false });
-      }
-    });
-    const leave = () => { void channel.untrack(); };
+    channel
+      .on("presence", { event: "sync" }, () => {
+        if (disposed) return;
+        const visitors = Object.entries(
+          channel.presenceState<{ pathname?: unknown }>(),
+        )
+          .flatMap(([id, entries]) => {
+            const path = entries.at(-1)?.pathname;
+            return typeof path === "string" &&
+              path.startsWith("/") &&
+              !path.startsWith("/admin")
+              ? [{ id, pathname: path.slice(0, 300) }]
+              : [];
+          })
+          .sort((a, b) => a.id.localeCompare(b.id));
+        setSnapshot({ visitors, connected: true });
+      })
+      .subscribe((status) => {
+        if (disposed) return;
+        if (status === "SUBSCRIBED") {
+          setSnapshot((current) => ({ ...current, connected: true }));
+          track();
+        } else {
+          setSnapshot({ visitors: [], connected: false });
+        }
+      });
+    const leave = () => {
+      void channel.untrack();
+    };
     window.addEventListener("pagehide", leave);
     window.addEventListener("pageshow", track);
     return () => {
@@ -67,5 +91,9 @@ export default function LivePresence({ children }: { children: React.ReactNode }
     };
   }, []);
 
-  return <PresenceContext.Provider value={snapshot}>{children}</PresenceContext.Provider>;
+  return (
+    <PresenceContext.Provider value={snapshot}>
+      {children}
+    </PresenceContext.Provider>
+  );
 }

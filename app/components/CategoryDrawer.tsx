@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { categorySlug } from "@/lib/category-path";
+import { openDialog } from "@/lib/dialog";
 import s from "../customer.module.css";
 
 export default function CategoryDrawer({
@@ -17,16 +18,10 @@ export default function CategoryDrawer({
   const [closing, setClosing] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    const element = dialog.current;
-    const previous = document.activeElement as HTMLElement | null;
-    const overflow = document.body.style.overflow;
-    element?.showModal();
-    document.body.style.overflow = "hidden";
+    const restorePage = openDialog(dialog.current);
     return () => {
       if (timer.current) clearTimeout(timer.current);
-      element?.close();
-      document.body.style.overflow = overflow;
-      previous?.focus();
+      restorePage();
     };
   }, []);
   const dismiss = () => {

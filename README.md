@@ -1,5 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Working on ToyLogix
+
+- `npm run dev` starts the local app; Supabase settings come from `.env.local`.
+- `npm run lint` checks the application source.
+- `npm test` runs regression tests for catalog filters, Romanian text matching, favorites, registration validation, and modal cleanup. The test runner uses Node's native TypeScript support (Node 22.6 or newer).
+- `npm run build` checks TypeScript and builds all routes.
+
+Catalog rules live in `lib/catalog.ts`; the store's image, product-detail and favorites views live next to `Storefront.tsx`. Store session subscriptions and favorite persistence have dedicated hooks. Admin draft defaults and types live in `app/admin/models.ts`, and its inventory table is a separate view. Shared modal cleanup lives in `lib/dialog.ts`; registration validation and error messages live in `lib/auth-validation.ts`.
+
+Keep Supabase authorization, approval checks, request cancellation, camera cleanup, and storage error handling in place when changing these modules. They protect existing user flows. Styling is kept in the existing CSS modules.
+
 ## Getting Started
 
 First, run the development server:
