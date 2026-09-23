@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef, useState, type Ref } from "react";
 import Link from "next/link";
 import s from "../customer.module.css";
 
@@ -13,6 +13,7 @@ export default function MobileAccountMenu({
   isDark,
   onToggleTheme,
   onLogout,
+  wishlistTargetRef,
 }: {
   name?: string;
   isAdmin: boolean;
@@ -22,45 +23,46 @@ export default function MobileAccountMenu({
   isDark: boolean;
   onToggleTheme: () => void;
   onLogout: () => Promise<void>;
+  wishlistTargetRef: Ref<HTMLSpanElement>;
 }) {
-  const menu = useRef<HTMLDetailsElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const dropdownId = useId();
   const closeMenu = () => {
-    menu.current?.removeAttribute("open");
-    menu.current?.querySelector("summary")?.focus();
+    setOpen(false);
+    trigger.current?.focus();
   };
 
   useEffect(() => {
-    const closeOutside = (event: PointerEvent) => {
+    const closeOutside = (event: Event) => {
       if (event.target instanceof Node && !menu.current?.contains(event.target)) {
-        menu.current?.removeAttribute("open");
+        setOpen(false);
       }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && menu.current?.open) {
-        menu.current.removeAttribute("open");
-        menu.current.querySelector("summary")?.focus();
+      if (event.key === "Escape" && menu.current?.contains(document.activeElement)) {
+        setOpen(false);
+        trigger.current?.focus();
       }
     };
     document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("focusin", closeOutside);
     document.addEventListener("keydown", closeOnEscape);
     return () => {
       document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("focusin", closeOutside);
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, []);
 
   return (
-    <details
+    <div
       ref={menu}
       className={s.mobileAccountMenu}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
-          event.currentTarget.removeAttribute("open");
-        }
-      }}
     >
-      <summary className={s.mobileAccountTrigger} aria-label="Meniul contului">
-        <span className={s.accountAvatar} aria-hidden="true">
+      <button type="button" ref={trigger} className={s.mobileAccountTrigger} aria-label="Meniul contului" aria-expanded={open} aria-controls={dropdownId} onClick={() => setOpen((value) => !value)}>
+        <span ref={wishlistTargetRef} className={s.accountAvatar} aria-hidden="true">
           {(name || "Partener")
             .trim()
             .split(/\s+/)
@@ -69,13 +71,13 @@ export default function MobileAccountMenu({
             .join("")
             .toLocaleUpperCase("ro")}
         </span>
-      </summary>
-      <div className={s.mobileAccountDropdown}>
-        <Link href="/account" onClick={() => menu.current?.removeAttribute("open")}>
+      </button>
+      {open && <div id={dropdownId} className={s.mobileAccountDropdown}>
+        <Link href="/account" onClick={() => setOpen(false)}>
           Contul meu
         </Link>
         {isAdmin && (
-          <Link href="/admin" onClick={() => menu.current?.removeAttribute("open")}>
+          <Link href="/admin" onClick={() => setOpen(false)}>
             Admin Panel <span aria-hidden="true">↗</span>
           </Link>
         )}
@@ -108,7 +110,7 @@ export default function MobileAccountMenu({
             <path d="M9 4H5v16h4M10 12h11m-4-4 4 4-4 4" />
           </svg>
         </button>
-      </div>
-    </details>
+      </div>}
+    </div>
   );
 }

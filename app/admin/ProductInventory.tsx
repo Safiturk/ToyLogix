@@ -1,21 +1,44 @@
+import { useState } from "react";
 import type { InventoryProduct } from "./models";
 import dashboard from "./dashboard.module.css";
 
 type Props = {
   products: InventoryProduct[];
   editProduct: (product: InventoryProduct) => void;
-  deleteProduct: (id: number) => void;
+  archiveProduct: (id: number, archived: boolean) => void;
+  showHistory: (id: number) => void;
 };
 export default function ProductInventory({
   products,
   editProduct,
-  deleteProduct,
+  archiveProduct,
+  showHistory,
 }: Props) {
+  const [archiveFilter, setArchiveFilter] = useState("active");
+  const visibleProducts = products.filter(
+    (product) =>
+      archiveFilter === "all" ||
+      (archiveFilter === "archived"
+        ? product.is_archived
+        : !product.is_archived),
+  );
   return (
     <section className={`${dashboard.section} ${dashboard.inventory}`}>
       <h2 className="text-xl font-bold text-slate-800">
-        Inventar Produse ({products.length})
+        Inventar Produse ({visibleProducts.length})
       </h2>
+      <label className="block my-3 text-sm">
+        Stare produse{" "}
+        <select
+          className="border rounded p-2"
+          value={archiveFilter}
+          onChange={(e) => setArchiveFilter(e.target.value)}
+        >
+          <option value="active">Active</option>
+          <option value="archived">Arhivate</option>
+          <option value="all">Toate</option>
+        </select>
+      </label>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -32,7 +55,7 @@ export default function ProductInventory({
             </tr>
           </thead>
           <tbody className="divide-y text-xs">
-            {products.map((product) => (
+            {visibleProducts.map((product) => (
               <tr key={product.id} className="hover:bg-slate-50">
                 <td className="p-3">
                   <div className="w-10 h-10 rounded-lg border overflow-hidden bg-slate-100">
@@ -48,7 +71,17 @@ export default function ProductInventory({
                   </div>
                 </td>
                 <td className="p-3 font-mono">{product.cod_bara}</td>
-                <td className="p-3 font-bold">{product.nume_produs}</td>
+                <td className="p-3 font-bold">
+                  <button
+                    className="text-indigo-700 underline"
+                    onClick={() => product.id && showHistory(product.id)}
+                  >
+                    {product.nume_produs}
+                  </button>
+                  {product.is_archived && (
+                    <span className="block text-slate-500">Arhivat</span>
+                  )}
+                </td>
                 <td className="p-3">
                   <span className="px-2 py-0.5 bg-slate-100 rounded text-[11px]">
                     {product.categorie}
@@ -79,10 +112,13 @@ export default function ProductInventory({
                     Editează
                   </button>
                   <button
-                    onClick={() => product.id && deleteProduct(product.id)}
+                    onClick={() =>
+                      product.id &&
+                      archiveProduct(product.id, !product.is_archived)
+                    }
                     className="px-3 py-1 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 font-bold transition"
                   >
-                    Șterge
+                    {product.is_archived ? "Reactivează" : "Arhivează"}
                   </button>
                 </td>
               </tr>

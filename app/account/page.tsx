@@ -29,6 +29,15 @@ export default function AccountPage() {
           router.replace("/login");
           return;
         }
+        if (account.rol === "admin") {
+          const { data: verified, error: denied } =
+            await supabase.rpc("toylogix_is_admin");
+          if (denied) throw denied;
+          if (!verified) {
+            router.replace("/account/security");
+            return;
+          }
+        }
         const { data, error } = await supabase
           .from("billing_profiles")
           .select("*")
@@ -98,7 +107,10 @@ export default function AccountPage() {
           <Link href="/store">← ToyLogix / Catalog</Link>
           <div className="flex items-center gap-5">
             {profile?.rol === "admin" && profile.status === "approved" && (
-              <Link href="/admin">Admin Panel</Link>
+              <>
+                <Link href="/account/security">Securitate / 2FA</Link>
+                <Link href="/admin">Admin Panel</Link>
+              </>
             )}
             <button
               type="button"

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { supabase, initialAuthLink } from "@/lib/supabase";
 import s from "../components/account-access.module.css";
 import BrandLogo from "../components/BrandLogo";
 
@@ -17,9 +17,11 @@ export default function EmailConfirmedPage() {
     const timer = setTimeout(() => finish("unavailable"), 15000);
     async function verify() {
       try {
-        const hash = new URLSearchParams(window.location.hash.slice(1));
-        const query = new URLSearchParams(window.location.search);
-        if (hash.has("error") || hash.has("error_code") || query.has("error")) {
+        if (
+          initialAuthLink.error ||
+          initialAuthLink.type !== "signup" ||
+          !initialAuthLink.hasTokens
+        ) {
           window.history.replaceState(null, "", window.location.pathname);
           finish("invalid");
           return;

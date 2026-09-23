@@ -68,6 +68,7 @@ export default function Storefront({
   const { favorites, favoriteError, toggleFavorite } = useFavorites(user?.id);
   const wishlistIcon = useRef<HTMLSpanElement>(null);
   const wishlistBadge = useRef<HTMLElement>(null);
+  const mobileWishlistTarget = useRef<HTMLSpanElement>(null);
   const { fly, cancel: cancelWishlistMotion } = useWishlistMotion();
   useEffect(() => {
     if (session !== undefined && !parseStoreSession(session))
@@ -87,6 +88,7 @@ export default function Storefront({
       const { data, error: failure } = await supabase
         .from("produse")
         .select("*")
+        .eq("is_archived", false)
         .order("id", { ascending: false })
         .abortSignal(controller.signal);
       if (unmountSignal?.aborted) return;
@@ -317,6 +319,7 @@ export default function Storefront({
               isDark={theme === "dark"}
               onToggleTheme={toggleTheme}
               onLogout={logout}
+              wishlistTargetRef={mobileWishlistTarget}
             />
             <button
               className={s.hamburger}
@@ -736,12 +739,14 @@ export default function Storefront({
                           const source = event.currentTarget
                             .closest("article")
                             ?.querySelector<HTMLElement>(`.${s.cardImage}`);
-                          if (source)
+                          if (source) {
+                            const isMobile = window.matchMedia("(max-width: 767px)").matches;
                             fly(
                               source,
-                              wishlistIcon.current,
-                              wishlistBadge.current,
+                              isMobile ? mobileWishlistTarget.current : wishlistIcon.current,
+                              isMobile ? mobileWishlistTarget.current : wishlistBadge.current,
                             );
+                          }
                         }}
                       >
                         <svg

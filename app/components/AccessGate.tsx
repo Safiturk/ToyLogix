@@ -19,7 +19,7 @@ export default function AccessGate({
       try {
         const profile = await currentAccount();
         if (!active) return;
-        if (!profile) {
+        if (!profile || !profile.is_active) {
           setAllowed(false);
           router.replace("/login");
           return;
@@ -31,6 +31,16 @@ export default function AccessGate({
           setAllowed(false);
           router.replace(admin ? "/store" : "/account");
           return;
+        }
+        if (profile.rol === "admin") {
+          const { data, error } = await supabase.rpc("toylogix_is_admin");
+          if (!active) return;
+          if (error) throw error;
+          if (!data) {
+            setAllowed(false);
+            router.replace("/account/security");
+            return;
+          }
         }
         localStorage.setItem("user_session", JSON.stringify(profile));
         localStorage.removeItem("admin_authenticated");

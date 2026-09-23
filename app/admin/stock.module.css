@@ -1,0 +1,88 @@
+.panel {
+  scroll-margin-top: 24px;
+}
+.panel h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+.panel h3 {
+  font-weight: 700;
+  margin: 12px 0;
+}
+.filters,
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+  align-items: end;
+}
+.panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.panel input,
+.panel select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px;
+  background: white;
+  max-width: 100%;
+}
+.panel button {
+  background: #e0e7ff;
+  color: #312e81;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.panel button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.panel a {
+  color: #4338ca;
+  text-decoration: underline;
+}
+.detail {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 12px;
+  margin: 16px 0;
+}
+.detail p {
+  margin: 8px 0;
+  font-size: 0.85rem;
+}
+.table {
+  overflow-x: auto;
+}
+.table table {
+  width: 100%;
+  font-size: 0.8rem;
+  text-align: left;
+  border-collapse: collapse;
+}
+.table td,
+.table th {
+  padding: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+.table small {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #64748b;
+}
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}

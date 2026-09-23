@@ -1935,8 +1935,7 @@
     display: none;
   }
   .mobileAccountMenu { display: block; position: relative; grid-column: 3; grid-row: 1; justify-self: end; }
-  .mobileAccountTrigger { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; list-style: none; }
-  .mobileAccountTrigger::-webkit-details-marker { display: none; }
+  .mobileAccountTrigger { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; background: transparent; touch-action: manipulation; }
   .mobileAccountDropdown { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: 220px; max-width: calc(100vw - 32px); padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 28px #24213b26; }
   .mobileAccountDropdown a, .mobileAccountDropdown button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; text-align: left; }
   .mobileAccountDropdown b { padding: 0 6px; border-radius: 8px; background: var(--line); }

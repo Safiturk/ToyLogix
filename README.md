@@ -4,12 +4,28 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 - `npm run dev` starts the local app; Supabase settings come from `.env.local`.
 - `npm run lint` checks the application source.
-- `npm test` runs regression tests for catalog filters, Romanian text matching, favorites, registration validation, and modal cleanup. The test runner uses Node's native TypeScript support (Node 22.6 or newer).
+- `npm run typecheck` checks TypeScript without building.
+- `npm test` runs catalog/account regression tests and stock validation, migration, permissions, reversal, archive and transaction tests in a disposable PGlite PostgreSQL database. The test runner uses Node's native TypeScript support (Node 22.6 or newer).
+- `npm run test:concurrency` starts a disposable local PostgreSQL cluster and tests competing withdrawals, receipts, reversals and archiving using separate connections. It never connects to Supabase. The `embedded-postgres` development dependency supplies native binaries; its installation scripts must be enabled. Run as a normal user (PostgreSQL refuses root).
 - `npm run build` checks TypeScript and builds all routes.
 
 Catalog rules live in `lib/catalog.ts`; the store's image, product-detail and favorites views live next to `Storefront.tsx`. Store session subscriptions and favorite persistence have dedicated hooks. Admin draft defaults and types live in `app/admin/models.ts`, and its inventory table is a separate view. Shared modal cleanup lives in `lib/dialog.ts`; registration validation and error messages live in `lib/auth-validation.ts`.
 
 Keep Supabase authorization, approval checks, request cancellation, camera cleanup, and storage error handling in place when changing these modules. They protect existing user flows. Styling is kept in the existing CSS modules.
+
+## Stock management
+
+See [STOCK-MANAGEMENT.md](./STOCK-MANAGEMENT.md) for the initial audit, per-requirement implementation report, migration instructions, test coverage and operational rules.
+
+The stock migration is `supabase/migrations/202609230001_stock_management.sql`, applied **after** the account-security migration. Apply it to the intended database before running the updated UI. Existing `produse.stoc_actual` balances are preserved as `opening_stock`; no historical operators or reasons are invented. New products start at zero. All subsequent stock changes use the `record_stock_movement` RPC with a mandatory reason, and negative stock is prohibited. Archive products instead of deleting them. No GitHub push or Netlify deployment is part of this change.
+
+## Account security
+
+See [SECURITY-MANAGEMENT.md](./SECURITY-MANAGEMENT.md) for the eight-part implementation report, access matrix, account deletion rules, tests and remaining live checks. [AUTH-SETUP.md](./AUTH-SETUP.md) records the earlier rollout.
+
+The new `20260923210656_account_hardening.sql` migration follows both migrations above. It adds current-session/MFA authorization, account isolation, immutable audit logs, explicit account lifecycle operations, hashed one-use recovery codes and persistent rate counters. Admins enter `/account/security` for TOTP setup/verification before `/admin`.
+
+Copy the server configuration names from [.env.example](./.env.example); never put the service role key into public client variables. Login/signup/reset now use server endpoints and fail closed if configuration or the rate-limit database is unavailable. The migration and UI require a coordinated rollout; neither has been published. The concurrency suite also checks recovery-code races, shared rate counters and immediate role revocation.
 
 ## Getting Started
 

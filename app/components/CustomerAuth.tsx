@@ -3,13 +3,12 @@ import { useState } from "react";
 import Link from "next/link";
 import AccountAccess from "./AccountAccess";
 import BrandLogo from "./BrandLogo";
-import { supabase } from "@/lib/supabase";
+import { authPost } from "@/lib/auth-client";
 import { signOutAccount } from "@/lib/account";
 import {
   isRomanianPhone,
   isEmailAddress,
   hasPasswordComplexity,
-  registrationErrorMessage,
 } from "@/lib/auth-validation";
 import s from "../customer.module.css";
 
@@ -99,35 +98,15 @@ export default function CustomerAuth({
     setLoading(true);
     setMessage("");
     try {
-      // Auth owns the password; the existing table retains the B2B approval profile.
-      const { data: account, error: accountError } = await supabase.auth.signUp(
-        {
-          email: email.trim(),
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/email-confirmed`,
-            data: {
-              nume_complet: name.trim(),
-              telefon: telefon.trim(),
-              nume_firma: company.trim() || null,
-            },
-          },
-        },
-      );
-      if (accountError || !account.user) {
-        setMessage(registrationErrorMessage(accountError));
-        return;
-      }
-      if (account.user.identities?.length === 0) {
-        setMessage(
-          "Verifică emailul sau folosește recuperarea parolei dacă ai deja un cont.",
-        );
-        return;
-      }
-      // Profile creation is atomic with Auth signup via the database trigger.
+      await authPost("/api/auth/signup", {
+        email: email.trim(),
+        password,
+        name: name.trim(),
+        phone: telefon.trim(),
+        company: company.trim(),
+      });
       await signOutAccount();
-      // Keep the existing notification integration. A notification failure must not prompt a duplicate registration.
-      setNeedsEmailConfirmation(!account.session);
+      setNeedsEmailConfirmation(true);
       setSuccess(true);
       try {
         await fetch("https://formspree.io/f/mwvggppn", {
@@ -147,9 +126,11 @@ export default function CustomerAuth({
       } catch {
         /* The registration already succeeded. */
       }
-    } catch {
+    } catch (failure) {
       setMessage(
-        "Operațiunea nu a putut fi finalizată. Verificați conexiunea și încercați din nou.",
+        failure instanceof Error
+          ? failure.message
+          : "Operațiunea nu a putut fi finalizată. Încercați din nou.",
       );
     } finally {
       setLoading(false);
@@ -208,8 +189,9 @@ export default function CustomerAuth({
             <div className={s.formSuccess} role="status">
               <h3>Cererea ta a fost înregistrată.</h3>
               <p>
-                Contul este în curs de verificare. Te vei putea autentifica după
-                aprobarea cererii.{" "}
+                Contul este în curs de verificare. După confirmarea emailului
+                poți completa datele de facturare; catalogul este disponibil
+                după aprobare.{" "}
                 {needsEmailConfirmation &&
                   "Verifică emailul și confirmă adresa pentru a te putea autentifica."}
               </p>

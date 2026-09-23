@@ -1,5 +1,22 @@
 # Supabase Auth rollout
 
+## Local hardening revision (2026-09-23, not published)
+
+The current working revision additionally requires
+`supabase/migrations/202609230001_stock_management.sql`, then
+`supabase/migrations/20260923210656_account_hardening.sql`, the server-only
+variables in `.env.example`, and the updated MFA UI in one coordinated rollout.
+See [SECURITY-MANAGEMENT.md](./SECURITY-MANAGEMENT.md) for the authoritative
+current access matrix, deletion/FK behavior, rate limits and eight-item report.
+Login/signup/reset now pass through Next server endpoints before Supabase Auth.
+The hosted verification below describes the earlier September 19 migration only.
+The new migrations have **not** been applied to the hosted project; no Netlify or
+GitHub publication was performed. One real reset email was received by the
+authorized test recipient; no password/factor changes or signup email delivery
+tests were performed.
+
+## Earlier setup and rollout
+
 Login now uses Supabase Auth `signInWithPassword`. Recovery uses
 `resetPasswordForEmail` and `updateUser`; legacy `utilizatori.parola` values are
 not valid Supabase Auth credentials and are deliberately not a login fallback.

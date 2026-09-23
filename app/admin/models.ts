@@ -5,11 +5,22 @@ export interface InventoryProduct extends Omit<Product, "id"> {
   id?: number;
   gen: string;
   stoc_critic: number;
+  critical_stock_level?: number;
+  is_archived?: boolean;
+  archived_at?: string | null;
+  opening_stock?: number;
 }
 
 export type AdminAccount = Pick<
   Account,
-  "id" | "nume_complet" | "email" | "telefon" | "status" | "rol"
+  | "id"
+  | "auth_user_id"
+  | "nume_complet"
+  | "email"
+  | "telefon"
+  | "status"
+  | "rol"
+  | "is_active"
 > & { nume_firma?: string | null };
 
 export function createProductDraft(): InventoryProduct {

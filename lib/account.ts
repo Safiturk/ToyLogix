@@ -8,9 +8,10 @@ export type Account = {
   nume_firma: string | null;
   rol: "admin" | "user";
   status: "pending" | "approved" | "rejected";
+  is_active: boolean;
 };
 export const accountColumns =
-  "id,auth_user_id,nume_complet,email,telefon,nume_firma,rol,status";
+  "id,auth_user_id,nume_complet,email,telefon,nume_firma,rol,status,is_active";
 export async function currentAccount(): Promise<Account | null> {
   const {
     data: { user },
@@ -25,8 +26,9 @@ export async function currentAccount(): Promise<Account | null> {
   if (failure) throw failure;
   return data as Account | null;
 }
-export async function signOutAccount() {
-  await supabase.auth.signOut({ scope: "local" });
+export async function signOutAccount(scope: "local" | "global" = "local") {
+  const { error } = await supabase.auth.signOut({ scope });
+  if (error) throw error;
   localStorage.removeItem("user_session");
   localStorage.removeItem("admin_authenticated");
   window.dispatchEvent(new Event("toylogix-session"));

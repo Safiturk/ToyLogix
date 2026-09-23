@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase, initialAuthLink } from "@/lib/supabase";
+import { authPost, passwordLogin } from "@/lib/auth-client";
+import { accountDestination, isRecoveryLink } from "@/lib/security-rules";
 import { accountColumns, signOutAccount } from "@/lib/account";
 import { hasPasswordComplexity } from "@/lib/auth-validation";
 import s from "./account-access.module.css";
@@ -93,29 +95,35 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
   useEffect(() => {
     if (mode !== "update") return;
     let active = true;
-    // The Supabase browser client consumes recovery tokens from the email URL.
+    async function checkRecovery() {
+      try {
+        const { data: user, error } = await supabase.auth.getUser();
+        const { data: assurance, error: assuranceError } =
+          await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (active)
+          setSessionReady(
+            !error &&
+              !assuranceError &&
+              Boolean(user.user) &&
+              isRecoveryLink(
+                initialAuthLink,
+                assurance?.currentAuthenticationMethods || [],
+              ),
+          );
+      } catch {
+        if (active) setSessionReady(false);
+      } finally {
+        if (active) setSessionChecked(true);
+      }
+    }
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (active) {
-        setSessionReady(Boolean(session));
-        setSessionChecked(true);
-      }
+    } = supabase.auth.onAuthStateChange(() => {
+      setTimeout(() => {
+        if (active) void checkRecovery();
+      }, 0);
     });
-    void supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
-        if (active) {
-          setSessionReady(!error && Boolean(data.session));
-          setSessionChecked(true);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setSessionReady(false);
-          setSessionChecked(true);
-        }
-      });
+    void checkRecovery();
     return () => {
       active = false;
       subscription.unsubscribe();
@@ -152,16 +160,7 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
     setBusy(true);
     try {
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(
-          email.trim(),
-          { redirectTo: `${window.location.origin}/update-password` },
-        );
-        if (error) {
-          setError(
-            "Nu am putut trimite solicitarea. Încearcă din nou în câteva minute.",
-          );
-          return;
-        }
+        await authPost("/api/auth/reset", { email: email.trim() });
         setSuccess(true);
         return;
       }
@@ -175,16 +174,13 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
           );
           return;
         }
-        await signOutAccount();
+        await signOutAccount("global");
         setPassword("");
         setConfirmation("");
         setSuccess(true);
         return;
       }
-      const { data: auth, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      const { data: auth, error } = await passwordLogin(email.trim(), password);
       if (error || !auth.user) {
         setError(
           "Email sau parolă incorectă. Verifică și confirmarea adresei de email.",
@@ -217,15 +213,13 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
       localStorage.removeItem("admin_authenticated");
       window.dispatchEvent(new Event("toylogix-session"));
       // Pending partners can complete their own billing details, but not enter the catalog.
-      router.replace(
-        profile.status === "pending"
-          ? "/account"
-          : profile.rol === "admin"
-            ? "/admin"
-            : "/store",
+      router.replace(accountDestination(profile));
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Conexiunea a fost întreruptă. Încearcă din nou.",
       );
-    } catch {
-      setError("Conexiunea a fost întreruptă. Încearcă din nou.");
     } finally {
       setBusy(false);
     }

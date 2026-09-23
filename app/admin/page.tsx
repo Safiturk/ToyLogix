@@ -12,6 +12,11 @@ import dashboard from "./dashboard.module.css";
 import { currentAccount, accountColumns, signOutAccount } from "@/lib/account";
 import CustomerDetails from "./CustomerDetails";
 import ProductInventory from "./ProductInventory";
+import StockManagement from "./StockManagement";
+import AuditHistory from "./AuditHistory";
+import { authPost } from "@/lib/auth-client";
+import { archiveProduct as setProductArchived } from "@/lib/stock";
+import { productMetadata, stockError } from "@/lib/stock-rules";
 import {
   type InventoryProduct,
   type AdminAccount,
@@ -30,7 +35,12 @@ const DEFAULT_CATEGORIES = [
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [products, setProducts] = useState<InventoryProduct[]>([]);
+  const [allProducts, setProducts] = useState<InventoryProduct[]>([]);
+  const products = allProducts.filter((product) => !product.is_archived);
+  const [stockProductId, setStockProductId] = useState<number | null>(null);
+  const [productLoadError, setProductLoadError] = useState("");
+  const [auditVersion, setAuditVersion] = useState(0);
+  const [accountBusy, setAccountBusy] = useState(false);
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [savingProduct, setSavingProduct] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -71,6 +81,10 @@ export default function AdminDashboard() {
             .order("id", { ascending: false }),
         ]);
         if (active) {
+          if (products.error)
+            setProductLoadError(
+              "Inventarul nu a putut fi încărcat. Verificați conexiunea și migrarea bazei de date.",
+            );
           setProducts(products.data || []);
           setAccounts((accounts.data || []) as AdminAccount[]);
         }
@@ -90,9 +104,12 @@ export default function AdminDashboard() {
       .order("id", { ascending: false });
 
     if (error) {
-      console.error(error);
+      setProductLoadError(
+        "Inventarul nu a putut fi reîncărcat. Valorile afișate pot fi vechi.",
+      );
       return;
     }
+    setProductLoadError("");
     setProducts(data || []);
   };
 
@@ -102,6 +119,7 @@ export default function AdminDashboard() {
       .select(accountColumns)
       .order("id", { ascending: false });
     if (data) setAccounts(data);
+    setAuditVersion((value) => value + 1);
   };
 
   const updateAccountStatus = async (
@@ -111,7 +129,9 @@ export default function AdminDashboard() {
     const { error } = await supabase
       .from("utilizatori")
       .update({ status })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id")
+      .single();
     if (error) {
       alert(
         "Modificarea nu a fost salvată. Verifică permisiunile și conexiunea.",
@@ -124,21 +144,50 @@ export default function AdminDashboard() {
     refreshAccounts();
   };
 
-  const deleteAccount = async (id: number, email: string) => {
-    if (currentUser && currentUser.email === email) {
-      alert("Nu vă puteți șterge propriul cont de administrator!");
-      return;
+  const accountAction = async (
+    user: AdminAccount,
+    action: "access" | "profile" | "account",
+  ) => {
+    if (accountBusy || currentUser?.id === user.id) return;
+    const prompt =
+      action === "access"
+        ? user.is_active
+          ? "Închizi accesul? Datele sunt păstrate; accesul poate fi redeschis."
+          : "Redeschizi accesul? Rolul și aprobarea rămân neschimbate."
+        : action === "profile"
+          ? "Ștergi profilul? Accesul este oprit. Contul de autentificare, facturarea și istoricul sunt păstrate."
+          : "Ștergi definitiv contul de autentificare și profilul? Datele de facturare vor fi eliminate. Istoricul protejat poate împiedica ștergerea.";
+    if (!confirm(user.email + "\n" + prompt)) return;
+    setAccountBusy(true);
+    try {
+      if (action === "account")
+        await authPost(
+          "/api/admin/accounts/delete",
+          { profileId: user.id },
+          true,
+        );
+      else {
+        const { error } =
+          action === "access"
+            ? await supabase.rpc("deactivate_account", {
+                p_target_id: user.id,
+                p_disabled: user.is_active,
+              })
+            : await supabase.rpc("delete_profile", { p_target_id: user.id });
+        if (error) throw error;
+      }
+      setDetailUser(null);
+      await refreshAccounts();
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Operațiunea nu a reușit. Verifică accesul și conexiunea.",
+      );
+      await refreshAccounts();
+    } finally {
+      setAccountBusy(false);
     }
-
-    if (!confirm(`Sunteți sigur că doriți să ștergeți utilizatorul ${email}?`))
-      return;
-    const { error } = await supabase.from("utilizatori").delete().eq("id", id);
-    if (error) {
-      alert("Eroare la ștergere: " + error.message);
-      return;
-    }
-    alert("Utilizator șters cu succes!");
-    refreshAccounts();
   };
 
   const toggleAccountRole = async (user: AdminAccount) => {
@@ -151,7 +200,9 @@ export default function AdminDashboard() {
     const { error } = await supabase
       .from("utilizatori")
       .update({ rol: newRole })
-      .eq("id", user.id);
+      .eq("id", user.id)
+      .select("id")
+      .single();
     if (error) {
       alert(
         "Rolul nu a fost modificat. Numai un administrator autorizat poate schimba accesul.",
@@ -212,24 +263,30 @@ export default function AdminDashboard() {
     setIsCustomCategory(false);
   };
 
-  const deleteProduct = async (id: number) => {
-    if (!confirm("Sunteți sigur că doriți să ștergeți acest produs?")) return;
-    const { error } = await supabase.from("produse").delete().eq("id", id);
-    if (error) {
-      alert("Eroare la ștergere: " + error.message);
-      return;
+  const archiveProduct = async (id: number, archived: boolean) => {
+    try {
+      await setProductArchived(id, archived);
+      await refreshProducts();
+    } catch (error) {
+      alert(stockError(error));
     }
-    alert("Produs șters cu succes!");
-    refreshProducts();
+  };
+
+  const showStockHistory = (id: number) => {
+    setStockProductId(id);
+    document
+      .getElementById("stock-management")
+      ?.scrollIntoView({ behavior: "smooth" });
   };
 
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingProduct) return;
     setSavingProduct(true);
-
+    const metadata = productMetadata({ ...form });
     const { error } = editingId
-      ? await supabase.from("produse").update(form).eq("id", editingId)
-      : await supabase.from("produse").insert([form]);
+      ? await supabase.from("produse").update(metadata).eq("id", editingId)
+      : await supabase.from("produse").insert([metadata]);
     if (error) {
       alert(
         (editingId ? "Eroare la actualizare: " : "Eroare la salvare: ") +
@@ -282,7 +339,7 @@ export default function AdminDashboard() {
   ).sort((a, b) => a.localeCompare(b, "ro"));
 
   const pendingUsers = accounts.filter((u) => u.status === "pending");
-  const approvedUsers = accounts.filter((u) => u.status === "approved");
+  const registeredUsers = accounts;
   const criticalStockProducts = products.filter(
     (p) => p.stoc_actual <= p.stoc_critic,
   );
@@ -310,7 +367,6 @@ export default function AdminDashboard() {
     <div className={dashboard.page}>
       <div className={wings.layout}>
         <div className={`${wings.center} max-w-6xl mx-auto space-y-8`}>
-
           <header className={dashboard.header}>
             <Link href="/store" className={dashboard.brand}>
               <div className={dashboard.brandMark}>T</div>
@@ -388,7 +444,41 @@ export default function AdminDashboard() {
               >
                 {criticalStockProducts.length} produse
               </div>
+              <a
+                href="#critical-stock"
+                className="text-sm text-indigo-700 underline"
+              >
+                Vezi produsele
+              </a>
             </div>
+          </section>
+
+          {productLoadError && (
+            <p role="alert">
+              {productLoadError}{" "}
+              <button onClick={refreshProducts}>Reîncarcă</button>
+            </p>
+          )}
+          <section id="critical-stock" className={dashboard.section}>
+            <h2 className="text-xl font-bold">Produse cu stoc critic</h2>
+            {criticalStockProducts.length ? (
+              <ul className="mt-3 space-y-2">
+                {criticalStockProducts.map((product) => (
+                  <li key={product.id}>
+                    <button
+                      className="text-indigo-700 underline"
+                      onClick={() => product.id && showStockHistory(product.id)}
+                    >
+                      {product.nume_produs} — {product.stoc_actual} buc (prag:{" "}
+                      {product.critical_stock_level ?? product.stoc_critic}) ·
+                      Detalii și istoric
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Nu există produse cu stoc critic.</p>
+            )}
           </section>
 
           {pendingUsers.length > 0 && (
@@ -422,7 +512,31 @@ export default function AdminDashboard() {
                         <td className="p-3 font-mono">{u.telefon}</td>
                         <td className="p-3">{u.email}</td>
                         <td className="p-3">{u.nume_firma || "-"}</td>
-                        <td className="p-3 flex gap-2">
+                        <td className="p-3 flex flex-wrap gap-2">
+                          <button
+                            disabled={currentUser?.id === u.id || accountBusy}
+                            onClick={() => void accountAction(u, "access")}
+                          >
+                            {u.is_active
+                              ? "Închide accesul"
+                              : "Redeschide accesul"}
+                          </button>
+                          <button
+                            disabled={currentUser?.id === u.id || accountBusy}
+                            onClick={() => void accountAction(u, "profile")}
+                          >
+                            Șterge profilul
+                          </button>
+                          {u.status === "rejected" && (
+                            <button
+                              disabled={currentUser?.id === u.id || accountBusy}
+                              onClick={() =>
+                                void updateAccountStatus(u.id, "approved")
+                              }
+                            >
+                              Aprobă
+                            </button>
+                          )}
                           <button
                             onClick={() =>
                               updateAccountStatus(u.id, "approved")
@@ -449,7 +563,6 @@ export default function AdminDashboard() {
           )}
 
           <section className={`${dashboard.section} ${dashboard.accordion}`}>
-
             <div
               onClick={() => setIsUserTableOpen(!isUserTableOpen)}
               className={dashboard.accordionHeader}
@@ -459,7 +572,7 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold text-slate-800">
                   Utilizatori Înregistrați{" "}
                   <span className="text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-xl font-extrabold ml-1">
-                    ({approvedUsers.length})
+                    ({registeredUsers.length})
                   </span>
                 </h2>
               </div>
@@ -487,7 +600,7 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {approvedUsers.map((u) => {
+                      {registeredUsers.map((u) => {
                         const isSelf = currentUser?.email === u.email;
                         return (
                           <tr key={u.id} className="hover:bg-slate-50">
@@ -520,12 +633,15 @@ export default function AdminDashboard() {
                                     : "bg-blue-100 text-blue-700"
                                 }`}
                               >
-                                {u.rol.toUpperCase()}
+                                {u.rol.toUpperCase()} / {u.status}
+                                {!u.is_active && " / Acces închis"}
                               </span>
                             </td>
                             <td className="p-3 flex gap-2">
                               <button
-                                disabled={isSelf}
+                                disabled={
+                                  currentUser?.id === u.id || accountBusy
+                                }
                                 onClick={() => toggleAccountRole(u)}
                                 className={`px-2.5 py-1 rounded-lg font-bold transition text-[11px] ${
                                   isSelf
@@ -539,14 +655,14 @@ export default function AdminDashboard() {
                               </button>
                               <button
                                 disabled={isSelf}
-                                onClick={() => deleteAccount(u.id, u.email)}
+                                onClick={() => void accountAction(u, "account")}
                                 className={`px-2.5 py-1 rounded-lg font-bold transition text-[11px] ${
                                   isSelf
                                     ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
                                     : "bg-rose-100 hover:bg-rose-200 text-rose-700"
                                 }`}
                               >
-                                Șterge ✕
+                                Șterge contul
                               </button>
                             </td>
                           </tr>
@@ -955,19 +1071,26 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold mb-1">
-                    Stoc Actual
+                    Prag stoc critic
                   </label>
                   <input
                     type="number"
-                    value={form.stoc_actual}
+                    min="0"
+                    step="1"
+                    required
+                    value={form.stoc_critic}
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        stoc_actual: parseInt(e.target.value) || 0,
+                        stoc_critic: Number(e.target.value),
                       })
                     }
                     className="w-full p-2.5 border rounded-xl text-xs font-bold bg-amber-50 border-amber-300 outline-none"
                   />
+                  <p className="mt-2 text-xs text-slate-500">
+                    Stocul se modifică din „Stoc și istoric mișcări”. Produsele
+                    noi pornesc de la zero.
+                  </p>
                 </div>
               </div>
 
@@ -989,7 +1112,21 @@ export default function AdminDashboard() {
             </form>
           </section>
 
-          <ProductInventory products={products} editProduct={editProduct} deleteProduct={deleteProduct} />
+          <ProductInventory
+            products={allProducts}
+            editProduct={editProduct}
+            archiveProduct={archiveProduct}
+            showHistory={showStockHistory}
+          />
+          <AuditHistory refreshVersion={auditVersion} />
+          <StockManagement
+            key={stockProductId ?? "all"}
+            products={allProducts}
+            accounts={accounts}
+            selectedId={stockProductId}
+            selectProduct={setStockProductId}
+            refreshProducts={refreshProducts}
+          />
         </div>
 
         <div className={wings.left}>
