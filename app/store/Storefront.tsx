@@ -88,12 +88,14 @@ export default function Storefront({
       const { data, error: failure } = await supabase
         .from("produse")
         .select("*")
-        .eq("is_archived", false)
         .order("id", { ascending: false })
         .abortSignal(controller.signal);
       if (unmountSignal?.aborted) return;
       if (failure) throw failure;
-      setProducts(data ?? []);
+      // Older deployments do not have the archive column yet. RLS still
+      // controls visibility; omit archived rows when the column is available.
+      setProducts((data ?? []).filter((product) => product.is_archived !== true));
+      setError("");
     } catch {
       if (!unmountSignal?.aborted)
         setError(
