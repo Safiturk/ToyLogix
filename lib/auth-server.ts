@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createHmac } from "node:crypto";
 import { authJson, createAuthHandler, type AuthBackend } from "./auth-handler";
 import { accountDestination, type AuthAction } from "./security-rules";
+import { notifyRegistration } from "./registration-notifications";
 
 function configuration() {
   if (typeof window !== "undefined") throw new Error("Server module");
@@ -92,6 +93,21 @@ export async function handlePasswordAuth(action: AuthAction, request: Request) {
         });
         if (error) throw error;
         if (data.session) await client.auth.signOut({ scope: "local" });
+        try {
+          await notifyRegistration({
+            email,
+            name: metadata.nume_complet ?? "",
+            phone: metadata.telefon ?? "",
+            company: metadata.nume_firma ?? "",
+          });
+        } catch (notificationError) {
+          console.error(
+            "Registration succeeded but notification delivery failed.",
+            notificationError instanceof Error
+              ? notificationError.message
+              : "Unknown notification error",
+          );
+        }
       },
       async reset(email, redirect) {
         const { error } = await client.auth.resetPasswordForEmail(email, {

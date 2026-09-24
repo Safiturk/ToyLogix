@@ -199,9 +199,16 @@ try {
 } finally {
   await Promise.allSettled(
     clients.map(async (client) => {
-      await client.query("rollback");
-      await client.end();
+      try {
+        await client.query("rollback");
+      } finally {
+        await client.end();
+      }
     }),
   );
-  if (started) await pg.stop();
+  if (started) {
+    // embedded-postgres waits for the Windows child-process exit event. Keep
+    // shutdown bounded so a test cannot leave CI hanging after all assertions.
+    await Promise.race([pg.stop(), delay(5000)]);
+  }
 }
