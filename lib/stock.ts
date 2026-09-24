@@ -15,7 +15,7 @@ export async function listStockMovements(
   signal?: AbortSignal,
 ) {
   const { start, end, equals, first, last } = movementQueryOptions(filters);
-  let query = supabase.from("stock_movements").select("*", { count: "exact" });
+  let query = supabase.from("stock_movements").select("id,product_id,movement_type,quantity,created_at,created_by,reason,reversal_of,notes,reversed_at", { count: "exact" });
   for (const [column, value] of equals) query = query.eq(column, value);
   if (start) query = query.gte("created_at", start);
   if (end) query = query.lt("created_at", end);
@@ -26,7 +26,16 @@ export async function listStockMovements(
   if (signal) query = query.abortSignal(signal);
   const { data, count, error } = await query;
   if (error) throw error;
-  return { movements: (data ?? []) as StockMovement[], count: count ?? 0 };
+  const movements = (data ?? []) as StockMovement[];
+  if (!movements.length) return { movements, count: count ?? 0 };
+  let productQuery = supabase.from("produse").select("id,nume_produs").in("id", [...new Set(movements.map((row) => row.product_id))]);
+  let actorQuery = supabase.from("utilizatori").select("auth_user_id,nume_complet").in("auth_user_id", [...new Set(movements.map((row) => row.created_by))]);
+  if (signal) { productQuery = productQuery.abortSignal(signal); actorQuery = actorQuery.abortSignal(signal); }
+  const [products, actors] = await Promise.all([productQuery, actorQuery]);
+  if (products.error || actors.error) throw products.error || actors.error;
+  const names = new Map((products.data ?? []).map((row) => [row.id,row.nume_produs]));
+  const actorNames = new Map((actors.data ?? []).map((row) => [row.auth_user_id,row.nume_complet]));
+  return { movements: movements.map((row) => ({ ...row, product_name: names.get(row.product_id), actor_name: actorNames.get(row.created_by) })), count: count ?? 0 };
 }
 
 export async function recordStockMovement(input: {

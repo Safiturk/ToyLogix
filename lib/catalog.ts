@@ -14,11 +14,22 @@ export interface Product {
   descriere?: string;
 }
 
-export type CatalogField =
+export type ProductCard = Pick<
+  Product,
+  | "id"
+  | "nume_produs"
   | "categorie"
   | "brand"
   | "varsta_recomandata"
-  | "material";
+  | "pret_retail"
+  | "pret_engros"
+  | "bucati_per_cutie"
+  | "stoc_actual"
+  | "imagini"
+>;
+
+export type CatalogField =
+  "categorie" | "brand" | "varsta_recomandata" | "material";
 
 export function normalizeCatalogText(value: unknown) {
   return String(value ?? "")
@@ -28,7 +39,7 @@ export function normalizeCatalogText(value: unknown) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-export function productImages(product: Product) {
+export function productImages(product: Pick<Product, "imagini">) {
   return (product.imagini ?? []).filter(Boolean);
 }
 

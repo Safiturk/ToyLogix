@@ -1,3 +1,4 @@
+import { serverEnv } from "./env-server";
 // Server routes only. Never import this module from a Client Component.
 import { createClient } from "@supabase/supabase-js";
 import { createHmac } from "node:crypto";
@@ -5,31 +6,8 @@ import { authJson, createAuthHandler, type AuthBackend } from "./auth-handler";
 import { accountDestination, type AuthAction } from "./security-rules";
 
 function configuration() {
-  if (typeof window !== "undefined") throw new Error("Server module");
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const rateSecret = process.env.AUTH_RATE_LIMIT_SECRET;
-  const siteUrl = process.env.AUTH_SITE_URL;
-  if (
-    !url ||
-    !key ||
-    !secret ||
-    !siteUrl ||
-    !rateSecret ||
-    rateSecret.length < 32
-  )
-    throw new Error("Auth configuration missing");
-  const site = new URL(siteUrl);
-  if (
-    site.protocol !== "https:" &&
-    !(
-      site.protocol === "http:" &&
-      ["localhost", "127.0.0.1"].includes(site.hostname)
-    )
-  )
-    throw new Error("Invalid auth origin");
-  return { url, key, secret, rateSecret, siteUrl: site.origin };
+  const env = serverEnv(true);
+  return { url: env.url, key: env.key, secret: env.secret!, rateSecret: env.rateSecret!, siteUrl: env.siteUrl! };
 }
 
 const authOptions = {

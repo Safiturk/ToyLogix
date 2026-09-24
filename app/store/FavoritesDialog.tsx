@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { openDialog } from "@/lib/dialog";
-import { type Product, productImages, formatPrice } from "@/lib/catalog";
+import { type ProductCard, productImages, formatPrice } from "@/lib/catalog";
 import ProductPicture from "./ProductPicture";
 import s from "../customer.module.css";
 export default function FavoritesDialog({
@@ -13,11 +13,11 @@ export default function FavoritesDialog({
   remove,
   favoriteError,
 }: {
-  products: Product[];
+  products: ProductCard[];
   loading: boolean;
   error: string;
   close: () => void;
-  openProduct: (product: Product) => void;
+  openProduct: (product: ProductCard) => void;
   remove: (id: number) => void;
   favoriteError: string;
 }) {

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { parseFavoriteIds } from "@/lib/favorites";
 import { readStoredValue, subscribeStoreSession } from "./useStoreSession";
 
@@ -13,12 +13,13 @@ export function useFavorites(userId?: number) {
     () => null,
   );
   const [favoriteError, setFavoriteError] = useState("");
-  let favorites: number[];
-  try {
-    favorites = parseFavoriteIds(saved);
-  } catch {
-    favorites = [];
-  }
+  const favorites = useMemo(() => {
+    try {
+      return parseFavoriteIds(saved);
+    } catch {
+      return [];
+    }
+  }, [saved]);
 
   function toggleFavorite(id: number) {
     try {

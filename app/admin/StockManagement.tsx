@@ -1,4 +1,5 @@
 "use client";
+import type { InventorySummary } from "@/lib/inventory-query";
 
 import { useEffect, useState } from "react";
 import {
@@ -13,25 +14,28 @@ import {
   type MovementType,
   type StockMovement,
 } from "@/lib/stock-rules";
-import type { AdminAccount, InventoryProduct } from "./models";
+import { supabase } from "@/lib/supabase";
+import { INVENTORY_SUMMARY_COLUMNS } from "@/lib/inventory-query";
+import { searchPattern } from "@/lib/catalog-query";
 import dashboard from "./dashboard.module.css";
 import styles from "./stock.module.css";
 
 type Props = {
-  products: InventoryProduct[];
-  accounts: AdminAccount[];
   selectedId: number | null;
   selectProduct: (id: number | null) => void;
   refreshProducts: () => Promise<void>;
 };
 
 export default function StockManagement({
-  products,
-  accounts,
   selectedId,
   selectProduct,
   refreshProducts,
 }: Props) {
+  const [products, setProducts] = useState<InventorySummary[]>([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [productPage, setProductPage] = useState(1);
+  const [productCount, setProductCount] = useState(0);
+  const [selectedProduct, setSelectedProduct] = useState<InventorySummary | undefined>();
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [userId, setUserId] = useState("");
@@ -53,7 +57,22 @@ export default function StockManagement({
   const [notes, setNotes] = useState("");
   const [reversing, setReversing] = useState<StockMovement | null>(null);
   const [reversalReason, setReversalReason] = useState("");
-  const product = products.find((item) => item.id === selectedId);
+  const product = selectedProduct;
+  useEffect(() => {
+    const controller = new AbortController();
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
+    async function load() {
+      let query = supabase.from("inventory_products").select(INVENTORY_SUMMARY_COLUMNS, { count: "exact" });
+      if (productSearch.trim()) query = query.or(`nume_produs.ilike.${searchPattern(productSearch)},cod_bara.ilike.${searchPattern(productSearch)}`);
+      const { data, count, error } = await query.order("id", { ascending: false }).range((productPage-1)*24, productPage*24-1).abortSignal(signal).overrideTypes<InventorySummary[], { merge: false }>();
+      if (error) throw error;
+      const selected = selectedId ? await supabase.from("inventory_products").select(INVENTORY_SUMMARY_COLUMNS).eq("id", selectedId).abortSignal(signal).single().overrideTypes<InventorySummary, { merge: false }>() : null;
+      if (selected?.error) throw selected.error;
+      if (!controller.signal.aborted) { setProducts(data ?? []); setProductCount(count ?? 0); setSelectedProduct(selected?.data ?? undefined); }
+    }
+    const timer = setTimeout(() => void load().catch(() => { if (!controller.signal.aborted) setLoadError("Produsele nu pot fi încărcate."); }),250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [selectedId, productSearch, productPage, revision]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -113,7 +132,7 @@ export default function StockManagement({
 
   async function reverse(event: React.FormEvent) {
     event.preventDefault();
-    const target = products.find((item) => item.id === reversing?.product_id);
+    const { data: target } = await supabase.from("inventory_products").select(INVENTORY_SUMMARY_COLUMNS).eq("id", reversing?.product_id ?? 0).single().overrideTypes<InventorySummary, { merge: false }>();
     if (!reversing || !target || busy) return;
     setBusy(true);
     setMessage("");
@@ -144,6 +163,8 @@ export default function StockManagement({
       <div className={styles.filters}>
         <label>
           Produs
+          <input placeholder="Caută produs sau cod" value={productSearch} onChange={(e) => { setProductSearch(e.target.value); setProductPage(1); }} />
+          <span><button disabled={productPage===1} onClick={() => setProductPage(productPage-1)}>Înapoi</button> {productPage} / {Math.max(1,Math.ceil(productCount/24))} <button disabled={productPage*24>=productCount} onClick={() => setProductPage(productPage+1)}>Înainte</button></span>
           <select
             value={selectedId ?? ""}
             disabled={busy}
@@ -158,7 +179,7 @@ export default function StockManagement({
             }}
           >
             <option value="">Toate produsele</option>
-            {products.map((item) => (
+            {[...new Map([...(selectedProduct ? [selectedProduct] : []), ...products].map((item) => [item.id,item])).values()].map((item) => (
               <option key={item.id} value={item.id}>
                 {item.nume_produs}
                 {item.is_archived ? " (arhivat)" : ""}
@@ -191,7 +212,6 @@ export default function StockManagement({
         <label>
           Utilizator (ID)
           <input
-            list="stock-users"
             value={userId}
             placeholder="Toți utilizatorii"
             onChange={(e) => {
@@ -200,15 +220,6 @@ export default function StockManagement({
             }}
           />
         </label>
-        <datalist id="stock-users">
-          {accounts
-            .filter((account) => account.auth_user_id)
-            .map((account) => (
-              <option key={account.id} value={account.auth_user_id!}>
-                {account.nume_complet}
-              </option>
-            ))}
-        </datalist>
         <label>
           Tip operațiune
           <select
@@ -254,8 +265,7 @@ export default function StockManagement({
                   disabled={busy}
                   onChange={(e) => setType(e.target.value as typeof type)}
                 >
-                  {Object.entries(movementLabels)
-                    .filter(([value]) => value !== "reversal")
+                  {Object.entries({ stock_in: movementLabels.stock_in, stock_out: movementLabels.stock_out, return: movementLabels.return, count_adjustment: movementLabels.count_adjustment })
                     .map(([value, label]) => (
                       <option key={value} value={value}>
                         {label}
@@ -373,17 +383,13 @@ export default function StockManagement({
                 {result.movements.map((movement) => (
                   <tr key={movement.id}>
                     <td>
-                      {products.find((item) => item.id === movement.product_id)
-                        ?.nume_produs ?? movement.product_id}
+                      {movement.product_name ?? movement.product_id}
                     </td>
                     <td>
                       {new Date(movement.created_at).toLocaleString("ro-RO")}
                     </td>
                     <td title={movement.created_by}>
-                      {accounts.find(
-                        (account) =>
-                          account.auth_user_id === movement.created_by,
-                      )?.nume_complet ?? movement.created_by}
+                      {movement.actor_name ?? movement.created_by}
                     </td>
                     <td>{movementLabels[movement.movement_type]}</td>
                     <td>

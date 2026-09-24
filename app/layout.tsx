@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import LivePresence from "./components/LivePresence";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "ToyLogix - Sistem",
@@ -22,11 +23,12 @@ export const viewport: Viewport = {
   themeColor: "#6546c8",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await connection();
   return (
     <html lang="ro">
       <body>

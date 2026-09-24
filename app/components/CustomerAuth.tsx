@@ -108,24 +108,6 @@ export default function CustomerAuth({
       await signOutAccount();
       setNeedsEmailConfirmation(true);
       setSuccess(true);
-      try {
-        await fetch("https://formspree.io/f/mwvggppn", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(10000),
-          body: JSON.stringify({
-            subject: "🔔 Nouă Înregistrare Partener ToyLogix B2B",
-            admin_message:
-              "S-a înregistrat un nou utilizator pe platforma B2B!",
-            nume_complet: name,
-            email,
-            telefon,
-            firma: company || "Client Direct (Fără Firmă)",
-          }),
-        });
-      } catch {
-        /* The registration already succeeded. */
-      }
     } catch (failure) {
       setMessage(
         failure instanceof Error

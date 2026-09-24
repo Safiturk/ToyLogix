@@ -42,12 +42,12 @@ export default function CustomerDetails({
       }
       const { data, error: failure } = await supabase
         .from("billing_profiles")
-        .select("*")
+        .select([...billingFields.map(([field]) => field), "vat_registered"].join(","))
         .eq("user_id", profile.auth_user_id)
         .maybeSingle();
       if (failure) throw failure;
       if (active) {
-        setBilling(data);
+        setBilling(data as Billing | null);
         setMessage(
           data ? "" : "Clientul nu a completat încă datele de facturare.",
         );

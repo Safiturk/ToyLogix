@@ -11,6 +11,15 @@ import wings from "./wings.module.css";
 import dashboard from "./dashboard.module.css";
 import { currentAccount, accountColumns, signOutAccount } from "@/lib/account";
 import CustomerDetails from "./CustomerDetails";
+import {
+  loadInventorySummary,
+  type InventorySummary,
+  type InventoryStats,
+  loadInventoryStats,
+  INVENTORY_SUMMARY_COLUMNS,
+} from "@/lib/inventory-query";
+import { DETAIL_COLUMNS, hasArchiveColumn, loadFacet } from "@/lib/catalog-query";
+import { uploadProductImage, isProductImageUrl } from "@/lib/product-storage";
 import ProductInventory from "./ProductInventory";
 import StockManagement from "./StockManagement";
 import AuditHistory from "./AuditHistory";
@@ -33,10 +42,25 @@ const DEFAULT_CATEGORIES = [
   "Carti",
 ];
 
+function SimplePagination({ page, count, size, change, label }: { page: number; count: number; size: number; change: (page: number) => void; label: string }) {
+  const last = Math.max(1, Math.ceil(count/size));
+  return <nav aria-label={label} className="flex gap-4"><span>{label}: {count}</span><button disabled={page===1} onClick={() => change(page-1)}>Înapoi</button><span>{page} / {last}</span><button disabled={page>=last} onClick={() => change(page+1)}>Înainte</button></nav>;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
-  const [allProducts, setProducts] = useState<InventoryProduct[]>([]);
-  const products = allProducts.filter((product) => !product.is_archived);
+  const [stats, setStats] = useState<InventoryStats>({ products: 0, stock: 0, retail: 0, wholesale: 0, critical: 0 });
+  const [criticalStockProducts, setCriticalProducts] = useState<InventorySummary[]>([]);
+  const [criticalPage, setCriticalPage] = useState(1);
+  const [facets, setFacets] = useState({ categorie: [] as string[], brand: [] as string[], material: [] as string[], varsta_recomandata: [] as string[] });
+  const [pendingUsers, setPendingUsers] = useState<AdminAccount[]>([]);
+  const [accountPage, setAccountPage] = useState(1);
+  const [pendingPage, setPendingPage] = useState(1);
+  const [accountCount, setAccountCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [accountVersion, setAccountVersion] = useState(0);
+  const [accountError, setAccountError] = useState("");
+  const [inventoryVersion, setInventoryVersion] = useState(0);
   const [stockProductId, setStockProductId] = useState<number | null>(null);
   const [productLoadError, setProductLoadError] = useState("");
   const [auditVersion, setAuditVersion] = useState(0);
@@ -52,7 +76,7 @@ export default function AdminDashboard() {
 
   const [isUserTableOpen, setIsUserTableOpen] = useState(false);
 
-  const [imageUrlInput, setImageUrlInput] = useState("");
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   const [form, setForm] = useState<InventoryProduct>(createProductDraft);
 
@@ -70,25 +94,7 @@ export default function AdminDashboard() {
           return;
         }
         setCurrentUser(profile);
-        const [products, accounts] = await Promise.all([
-          supabase
-            .from("produse")
-            .select("*")
-            .order("id", { ascending: false }),
-          supabase
-            .from("utilizatori")
-            .select(accountColumns)
-            .order("id", { ascending: false })
-            .overrideTypes<AdminAccount[], { merge: false }>(),
-        ]);
-        if (active) {
-          if (products.error)
-            setProductLoadError(
-              "Inventarul nu a putut fi încărcat. Verificați conexiunea și migrarea bazei de date.",
-            );
-          setProducts(products.data || []);
-          setAccounts((accounts.data || []) as AdminAccount[]);
-        }
+
       })
       .catch(() => {
         if (active) router.replace("/login");
@@ -98,31 +104,49 @@ export default function AdminDashboard() {
     };
   }, [router]);
 
-  const refreshProducts = async () => {
-    const { data, error } = await supabase
-      .from("produse")
-      .select("*")
-      .order("id", { ascending: false });
+  useEffect(() => {
+    if (!currentUser) return;
+    const controller = new AbortController();
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
+    void Promise.all([
+      loadInventoryStats(supabase, signal),
+      supabase.from("inventory_products").select(INVENTORY_SUMMARY_COLUMNS, { count: "exact" })
+        .eq("is_archived", false).eq("stock_is_critical", true).order("id", { ascending: false })
+        .range((criticalPage - 1) * 12, criticalPage * 12 - 1).abortSignal(signal)
+        .overrideTypes<InventorySummary[], { merge: false }>(),
+      Promise.all((["categorie", "brand", "material", "varsta_recomandata"] as const).map((field) => loadFacet(supabase, field, signal))),
+    ]).then(([totals, critical, options]) => {
+      if (controller.signal.aborted) return;
+      if (critical.error) throw critical.error;
+      const last = Math.max(1, Math.ceil((critical.count ?? 0) / 12));
+      if (criticalPage > last) { setCriticalPage(last); return; }
+      setStats(totals); setCriticalProducts(critical.data ?? []);
+      setFacets({ categorie: options[0], brand: options[1], material: options[2], varsta_recomandata: options[3] });
+      setProductLoadError("");
+    }).catch(() => { if (!controller.signal.aborted) setProductLoadError("Inventarul nu poate fi încărcat."); });
+    return () => controller.abort();
+  }, [currentUser, inventoryVersion, criticalPage]);
 
-    if (error) {
-      setProductLoadError(
-        "Inventarul nu a putut fi reîncărcat. Valorile afișate pot fi vechi.",
-      );
-      return;
-    }
-    setProductLoadError("");
-    setProducts(data || []);
-  };
+  useEffect(() => {
+    if (!currentUser) return;
+    const controller = new AbortController();
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
+    void Promise.all([
+      supabase.from("utilizatori").select(accountColumns, { count: "exact" }).order("id", { ascending: false }).range((accountPage-1)*24, accountPage*24-1).abortSignal(signal).overrideTypes<AdminAccount[], { merge: false }>(),
+      supabase.from("utilizatori").select(accountColumns, { count: "exact" }).eq("status", "pending").order("id", { ascending: false }).range((pendingPage-1)*12, pendingPage*12-1).abortSignal(signal).overrideTypes<AdminAccount[], { merge: false }>(),
+    ]).then(([registered, pending]) => {
+      if (controller.signal.aborted) return;
+      if (registered.error || pending.error) throw registered.error || pending.error;
+      setAccounts(registered.data ?? []); setAccountCount(registered.count ?? 0);
+      setPendingUsers(pending.data ?? []); setPendingCount(pending.count ?? 0); setAccountError("");
+      setAccountPage((page) => Math.min(page, Math.max(1, Math.ceil((registered.count ?? 0)/24))));
+      setPendingPage((page) => Math.min(page, Math.max(1, Math.ceil((pending.count ?? 0)/12))));
+    }).catch(() => { if (!controller.signal.aborted) setAccountError("Conturile nu pot fi încărcate."); });
+    return () => controller.abort();
+  }, [currentUser, accountVersion, accountPage, pendingPage]);
 
-  const refreshAccounts = async () => {
-    const { data } = await supabase
-      .from("utilizatori")
-      .select(accountColumns)
-      .order("id", { ascending: false })
-      .overrideTypes<AdminAccount[], { merge: false }>();
-    if (data) setAccounts(data);
-    setAuditVersion((value) => value + 1);
-  };
+  const refreshProducts = async () => { setInventoryVersion((value) => value + 1); };
+  const refreshAccounts = async () => { setAccountVersion((value) => value + 1); setAuditVersion((value) => value + 1); };
 
   const updateAccountStatus = async (
     id: number,
@@ -222,24 +246,15 @@ export default function AdminDashboard() {
     }));
   };
 
-  const addImageUrl = () => {
-    const imageUrl = imageUrlInput.trim();
-    if (!imageUrl) return;
-    appendProductImage(imageUrl);
-    setImageUrlInput("");
-  };
-
-  const handleLocalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) appendProductImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    });
+  const handleLocalFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (uploadingImages || !files.length) return;
+    if (files.length + (form.imagini?.length ?? 0) > 10) { alert("Maximum 10 imagini per produs."); return; }
+    setUploadingImages(true);
+    try { for (const file of files) appendProductImage(await uploadProductImage(file)); }
+    catch (error) { alert(error instanceof Error ? error.message : "Încărcarea a eșuat."); }
+    finally { setUploadingImages(false); }
   };
 
   const removeImageFromForm = (index: number) => {
@@ -249,14 +264,37 @@ export default function AdminDashboard() {
     }));
   };
 
-  const editProduct = (p: InventoryProduct) => {
-    setEditingId(p.id || null);
-    setForm({
-      ...p,
-      imagini: p.imagini || [],
-      descriere: p.descriere || "",
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const editProduct = async (p: { id?: number }) => {
+    if (!p.id) return;
+    try {
+      const archiveAvailable = await hasArchiveColumn(
+        supabase,
+        AbortSignal.timeout(15000),
+      );
+      const columns = archiveAvailable
+        ? DETAIL_COLUMNS
+        : DETAIL_COLUMNS.replace(",is_archived", "");
+      const { data, error } = await supabase
+        .from("produse")
+        .select(columns)
+        .eq("id", p.id)
+        .abortSignal(AbortSignal.timeout(15000))
+        .single()
+        .overrideTypes<InventoryProduct, { merge: false }>();
+      if (error || !data) {
+        alert("Produsul nu poate fi încărcat pentru editare.");
+        return;
+      }
+      setEditingId(data.id || null);
+      setForm({
+        ...data,
+        imagini: data.imagini || [],
+        descriere: data.descriere || "",
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      alert("Produsul nu poate fi încărcat pentru editare.");
+    }
   };
 
   const cancelEdit = () => {
@@ -283,7 +321,8 @@ export default function AdminDashboard() {
 
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (savingProduct) return;
+    if (savingProduct || uploadingImages) return;
+    if (form.imagini?.some((image) => !isProductImageUrl(image))) { alert("Încărcați imaginile în Storage înainte de salvare."); return; }
     setSavingProduct(true);
     const metadata = productMetadata({ ...form });
     const { error } = editingId
@@ -307,10 +346,11 @@ export default function AdminDashboard() {
   };
 
   const exportToExcel = async () => {
-    if (exporting || products.length === 0) return;
+    if (exporting || stats.products === 0) return;
     setExporting(true);
     try {
       const { createInventoryReport } = await import("@/lib/inventory-report");
+      const products = await loadInventorySummary(supabase, AbortSignal.timeout(60000));
       const buffer = await createInventoryReport(products);
       const blob = new Blob([Uint8Array.from(new Uint8Array(buffer))], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -330,34 +370,12 @@ export default function AdminDashboard() {
     }
   };
 
-  const existingCategories = Array.from(
-    new Set(products.map((p) => p.categorie).filter(Boolean)),
-  );
-  const allCategoryOptions = Array.from(
-    new Set([...DEFAULT_CATEGORIES, ...existingCategories]),
-  );
-  const existingBrandOptions = Array.from(
-    new Set(products.map((p) => p.brand?.trim()).filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b, "ro"));
-
-  const pendingUsers = accounts.filter((u) => u.status === "pending");
+  const allCategoryOptions = Array.from(new Set([...DEFAULT_CATEGORIES, ...facets.categorie]));
+  const existingBrandOptions = facets.brand;
   const registeredUsers = accounts;
-  const criticalStockProducts = products.filter(
-    (p) => p.stoc_actual <= p.stoc_critic,
-  );
-  const totalStockItems = products.reduce(
-    (sum, p) => sum + Number(p.stoc_actual || 0),
-    0,
-  );
-  const totalRetailValue = products.reduce(
-    (sum, p) => sum + Number(p.stoc_actual || 0) * Number(p.pret_retail || 0),
-    0,
-  );
-  const totalEngrosValue = products.reduce(
-    (sum, p) => sum + Number(p.stoc_actual || 0) * Number(p.pret_engros || 0),
-    0,
-  );
-
+  const totalStockItems = stats.stock;
+  const totalRetailValue = stats.retail;
+  const totalEngrosValue = stats.wholesale;
   const formatRON = (amount: number) => {
     return new Intl.NumberFormat("ro-RO", {
       minimumFractionDigits: 0,
@@ -383,7 +401,7 @@ export default function AdminDashboard() {
             <div className={dashboard.actions}>
               <button
                 onClick={exportToExcel}
-                disabled={exporting || products.length === 0}
+                disabled={exporting || stats.products === 0}
                 className={dashboard.action}
               >
                 {exporting ? "Se pregătește…" : "📊 Raport Excel"}
@@ -412,7 +430,7 @@ export default function AdminDashboard() {
                 Total Produse
               </span>
               <div className="text-2xl font-black text-slate-900">
-                {products.length} tipuri
+                {stats.products} tipuri
               </div>
             </div>
 
@@ -444,7 +462,7 @@ export default function AdminDashboard() {
               <div
                 className={`text-2xl font-black ${criticalStockProducts.length > 0 ? "text-rose-600" : "text-slate-900"}`}
               >
-                {criticalStockProducts.length} produse
+                {stats.critical} produse
               </div>
               <a
                 href="#critical-stock"
@@ -483,10 +501,14 @@ export default function AdminDashboard() {
             )}
           </section>
 
+          <SimplePagination page={criticalPage} count={stats.critical} size={12} change={setCriticalPage} label="Stoc critic" />
+          {accountError && <p role="alert">{accountError} <button onClick={refreshAccounts}>Reîncearcă</button></p>}
+          <SimplePagination page={pendingPage} count={pendingCount} size={12} change={setPendingPage} label="Solicitări" />
+          <SimplePagination page={accountPage} count={accountCount} size={24} change={setAccountPage} label="Conturi" />
           {pendingUsers.length > 0 && (
             <section className={`${dashboard.section} ${dashboard.pending}`}>
               <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2">
-                ⏳ Solicitări Înregistrare Noi ({pendingUsers.length})
+                ⏳ Solicitări Înregistrare Noi ({pendingCount})
               </h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs bg-white rounded-2xl overflow-hidden shadow-sm">
@@ -574,7 +596,7 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold text-slate-800">
                   Utilizatori Înregistrați{" "}
                   <span className="text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-xl font-extrabold ml-1">
-                    ({registeredUsers.length})
+                    ({accountCount})
                   </span>
                 </h2>
               </div>
@@ -864,9 +886,7 @@ export default function AdminDashboard() {
                         "6-9 ani",
                         "9-12 ani",
                         "12+ ani",
-                        ...products
-                          .map((p) => p.varsta_recomandata?.trim())
-                          .filter(Boolean),
+                        ...facets.varsta_recomandata,
                       ]),
                     ).map((value) => (
                       <option key={value} value={value} />
@@ -908,9 +928,7 @@ export default function AdminDashboard() {
                         "Pluș",
                         "Carton",
                         "Silicon",
-                        ...products
-                          .map((p) => p.material?.trim())
-                          .filter(Boolean),
+                        ...facets.material,
                       ]),
                     ).map((value) => (
                       <option key={value} value={value} />
@@ -931,34 +949,13 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <span className="text-[11px] text-slate-500 font-medium">
-                      Varianta A: Link URL Imagine
-                    </span>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={imageUrlInput}
-                        onChange={(e) => setImageUrlInput(e.target.value)}
-                        placeholder="https://site.com/imagine.jpg"
-                        className="flex-1 p-2 border bg-white rounded-lg text-xs outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={addImageUrl}
-                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition"
-                      >
-                        + Link
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      Varianta B: Încarcă din Calculator
+                      Încarcă imagini (JPEG, PNG, WebP · maximum 5 MB)
                     </span>
                     <label className="block">
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={uploadingImages}
                         multiple
                         onChange={handleLocalFileUpload}
                         className="block w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
@@ -967,6 +964,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {uploadingImages && <p role="status">Se optimizează și se încarcă imaginile…</p>}
                 {form.imagini && form.imagini.length > 0 && (
                   <div className="pt-2">
                     <span className="text-[11px] font-bold text-slate-600 block mb-1">
@@ -1100,7 +1098,7 @@ export default function AdminDashboard() {
                 <p>Verifică informațiile înainte de salvare.</p>
                 <button
                   type="submit"
-                  disabled={savingProduct}
+                  disabled={savingProduct || uploadingImages}
                   className={formStyles.saveButton}
                   aria-busy={savingProduct}
                 >
@@ -1115,7 +1113,8 @@ export default function AdminDashboard() {
           </section>
 
           <ProductInventory
-            products={allProducts}
+            refreshVersion={inventoryVersion}
+            enabled={Boolean(currentUser)}
             editProduct={editProduct}
             archiveProduct={archiveProduct}
             showHistory={showStockHistory}
@@ -1123,8 +1122,6 @@ export default function AdminDashboard() {
           <AuditHistory refreshVersion={auditVersion} />
           <StockManagement
             key={stockProductId ?? "all"}
-            products={allProducts}
-            accounts={accounts}
             selectedId={stockProductId}
             selectProduct={setStockProductId}
             refreshProducts={refreshProducts}

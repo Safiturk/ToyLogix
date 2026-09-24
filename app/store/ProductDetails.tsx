@@ -1,10 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { openDialog } from "@/lib/dialog";
-import { type Product, productImages, formatPrice } from "@/lib/catalog";
+import {
+  type ProductCard,
+  type Product,
+  productImages,
+  formatPrice,
+} from "@/lib/catalog";
 import ProductPicture from "./ProductPicture";
 import s from "../customer.module.css";
 import { useWishlistMotion } from "./useWishlistMotion";
+import { hasArchiveColumn } from "@/lib/catalog-query";
+import { supabase } from "@/lib/supabase";
 export default function ProductDetails({
   product,
   close,
@@ -12,13 +19,43 @@ export default function ProductDetails({
   toggleFavorite,
   favoriteError,
 }: {
-  product: Product;
+  product: ProductCard;
   close: () => void;
   isFavorite: boolean;
   toggleFavorite: () => boolean | null;
   favoriteError: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [detail, setDetail] = useState<Pick<
+    Product,
+    "cod_bara" | "material" | "descriere"
+  > | null>(null);
+  const [detailError, setDetailError] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      try {
+        const signal = AbortSignal.any([
+          controller.signal,
+          AbortSignal.timeout(15000),
+        ]);
+        const archiveAvailable = await hasArchiveColumn(supabase, signal);
+        let query = supabase
+          .from("produse")
+          .select("cod_bara,material,descriere")
+          .eq("id", product.id);
+        if (archiveAvailable) query = query.eq("is_archived", false);
+        const { data, error } = await query.abortSignal(signal).single();
+        if (controller.signal.aborted) return;
+        if (error) throw error;
+        setDetail(data);
+      } catch {
+        if (!controller.signal.aborted) setDetailError(true);
+      }
+    }
+    void load();
+    return () => controller.abort();
+  }, [product.id]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [toast, setToast] = useState<{ message: string } | null>(null);
   const { bounce } = useWishlistMotion();
@@ -149,9 +186,9 @@ export default function ProductDetails({
             </div>
             <dl className={s.specifications}>
               {[
-                ["Cod de bare", product.cod_bara],
+                ["Cod de bare", detail?.cod_bara],
                 ["Vârstă recomandată", product.varsta_recomandata],
-                ["Material", product.material],
+                ["Material", detail?.material],
                 ["Categorie", product.categorie],
               ].map(([label, value]) => (
                 <div key={label}>
@@ -162,8 +199,12 @@ export default function ProductDetails({
             </dl>
             <h3>Despre produs</h3>
             <p className={s.description}>
-              {product.descriere ||
-                "Descrierea acestui produs nu este încă disponibilă."}
+              {detailError
+                ? "Descrierea nu poate fi încărcată momentan."
+                : detail === null
+                  ? "Se încarcă descrierea…"
+                  : detail.descriere ||
+                    "Descrierea acestui produs nu este încă disponibilă."}
             </p>
           </div>
         </div>

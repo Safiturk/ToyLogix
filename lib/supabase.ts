@@ -1,8 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { parseAuthLink } from "./security-rules";
+import { readPublicEnv } from "./env-validation";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const { url: supabaseUrl, key: supabaseAnonKey } = readPublicEnv({
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED: process.env.NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED,
+});
 
 // Capture only link metadata before Auth removes the tokens from the URL.
 export const initialAuthLink = parseAuthLink(

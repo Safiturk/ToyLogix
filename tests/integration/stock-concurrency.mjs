@@ -6,6 +6,7 @@ import { join, resolve, sep } from "node:path";
 import { createServer } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 import EmbeddedPostgres from "embedded-postgres";
+import { bounded, closeClients, stopCluster } from "../helpers/postgres-lifecycle.mjs";
 
 const tempRoot = resolve(tmpdir());
 const databaseDir = await mkdtemp(join(tempRoot, "toylogix-stock-test-"));
@@ -25,15 +26,24 @@ const pg = new EmbeddedPostgres({
   onError: () => {},
 });
 const clients = [];
-let started = false;
+let cleanupPromise;
+const cleanup = () => cleanupPromise ??= (async () => {
+  try { await closeClients(clients); }
+  finally { await stopCluster(pg, databaseDir); }
+})();
+const interrupt = () => {
+  process.exitCode = 130;
+  void cleanup().catch((error) => { console.error(error); process.exitCode = 1; });
+};
+process.once("SIGINT", interrupt);
+process.once("SIGTERM", interrupt);
 try {
-  await pg.initialise();
-  await pg.start();
-  started = true;
+  await bounded(pg.initialise(), 60000, "Postgres initialise");
+  await bounded(pg.start(), 15000, "Postgres start");
   for (let index = 0; index < 3; index++) {
     const client = pg.getPgClient("postgres", "127.0.0.1");
-    await client.connect();
     clients.push(client);
+    await bounded(client.connect(), 5000, "Postgres connect");
   }
   const [observer, a, b] = clients;
   for (const path of [
@@ -83,14 +93,20 @@ try {
     );
   const compete = async (first, second) => {
     await a.query("begin");
+    let pending;
+    try {
     const initial = await first();
-    const pending = second().then(
+    pending = second().then(
       (value) => ({ value }),
       (error) => ({ error }),
     );
     await waitForLock();
     await a.query("commit");
     return { initial, second: await pending };
+    } finally {
+      await bounded(a.query("rollback"), 2000, "transaction rollback");
+      if (pending) await bounded(pending, 12000, "competing query");
+    }
   };
 
   const withdrawals = await compete(
@@ -197,11 +213,9 @@ try {
     "PASS: committed role revocation rejects the existing connection and unchanged JWT",
   );
 } finally {
-  await Promise.allSettled(
-    clients.map(async (client) => {
-      await client.query("rollback");
-      await client.end();
-    }),
-  );
-  if (started) await pg.stop();
+  try { await cleanup(); }
+  finally {
+    process.removeListener("SIGINT", interrupt);
+    process.removeListener("SIGTERM", interrupt);
+  }
 }

@@ -13,15 +13,17 @@ import s from "../customer.module.css";
 import { useCatalogTheme } from "./useCatalogTheme";
 import { useWishlistMotion } from "./useWishlistMotion";
 import {
-  type Product,
+  type ProductCard,
   type CatalogField,
-  normalizeCatalogText,
   productImages,
   formatPrice,
-  catalogOptions,
-  matchesCatalogFilters,
-  compareProducts,
 } from "@/lib/catalog";
+import {
+  hasArchiveColumn,
+  productPageQuery,
+  loadFacet,
+  loadFavoriteProducts,
+} from "@/lib/catalog-query";
 import ProductPicture from "./ProductPicture";
 import FavoritesDialog from "./FavoritesDialog";
 import MobileAccountMenu from "./MobileAccountMenu";
@@ -48,9 +50,10 @@ export default function Storefront({
     router.replace("/login");
   };
   const { theme, toggleTheme } = useCatalogTheme();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [products, setProducts] = useState<ProductCard[]>([]);
+  const [fetching, setLoading] = useState(true);
+  const [loadedKey, setLoadedKey] = useState("");
+  const [catalogError, setError] = useState("");
   const [query, setQuery] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -74,76 +77,196 @@ export default function Storefront({
     if (session !== undefined && !parseStoreSession(session))
       router.replace("/login");
   }, [router, session]);
-  const [selected, setSelected] = useState<Product | null>(null);
+  const [selected, setSelected] = useState<ProductCard | null>(null);
   useEffect(() => {
     if (selected || favoritesOpen) cancelWishlistMotion();
   }, [selected, favoritesOpen, cancelWishlistMotion]);
   const [scanner, setScanner] = useState(false);
-  const loadCatalog = useCallback(async (unmountSignal?: AbortSignal) => {
-    const controller = new AbortController();
-    const cancel = () => controller.abort();
-    unmountSignal?.addEventListener("abort", cancel, { once: true });
-    const timeout = setTimeout(cancel, 15000);
-    try {
-      const { data, error: failure } = await supabase
-        .from("produse")
-        .select("*")
-        .order("id", { ascending: false })
-        .abortSignal(controller.signal);
-      if (unmountSignal?.aborted) return;
-      if (failure) throw failure;
-      // Older deployments do not have the archive column yet. RLS still
-      // controls visibility; omit archived rows when the column is available.
-      setProducts((data ?? []).filter((product) => product.is_archived !== true));
-      setError("");
-    } catch {
-      if (!unmountSignal?.aborted)
-        setError(
-          "Catalogul nu poate fi încărcat momentan. Verificați conexiunea și încercați din nou.",
-        );
-    } finally {
-      clearTimeout(timeout);
-      unmountSignal?.removeEventListener("abort", cancel);
-      if (!unmountSignal?.aborted) setLoading(false);
-    }
-  }, []);
+  const [total, setTotal] = useState(0);
+  const [facets, setFacets] = useState<Record<CatalogField, string[]>>({
+    categorie: [],
+    brand: [],
+    material: [],
+    varsta_recomandata: [],
+  });
+  const [facetsReady, setFacetsReady] = useState(false);
+  const [facetError, setFacetError] = useState("");
+  const [retry, setRetry] = useState(0);
+  const [favoriteProducts, setFavoriteProducts] = useState<ProductCard[]>([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesLoadError, setFavoritesLoadError] = useState("");
+  const resolvedCategory = requestedSlug
+    ? facets.categorie.find((value) => categorySlug(value) === requestedSlug)
+    : categoryName;
+  const displayCategory = resolvedCategory ?? category;
+  const error = catalogError || facetError;
+  const facetOptions = (field: CatalogField) => facets[field];
+  const pageKey = JSON.stringify([
+    query,
+    resolvedCategory,
+    requestedSlug,
+    brands,
+    materials,
+    age,
+    stockOnly,
+    sort,
+    minPrice,
+    maxPrice,
+    pageSize,
+  ]);
+  const currentPage = pagination.key === pageKey ? pagination.page : 1;
+  const loading = fetching || loadedKey !== `${pageKey}:${currentPage}`;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
   useEffect(() => {
     if (!session) return;
-    // State updates inside load occur after the network request resolves (or fails).
     const controller = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadCatalog(controller.signal);
+    const signal = AbortSignal.any([
+      controller.signal,
+      AbortSignal.timeout(15000),
+    ]);
+    async function load() {
+      setFacetsReady(false);
+      setFacetError("");
+      try {
+        const categories = await loadFacet(supabase, "categorie", signal);
+        const selectedCategory = requestedSlug
+          ? categories.find((value) => categorySlug(value) === requestedSlug)
+          : categoryName;
+        const [brand, material, varsta_recomandata] = await Promise.all(
+          (["brand", "material", "varsta_recomandata"] as const).map((field) =>
+            loadFacet(supabase, field, signal, selectedCategory),
+          ),
+        );
+        if (!controller.signal.aborted) {
+          setFacets({
+            categorie: categories,
+            brand,
+            material,
+            varsta_recomandata,
+          });
+          setFacetsReady(true);
+        }
+      } catch {
+        if (!controller.signal.aborted)
+          setFacetError("Filtrele nu pot fi încărcate. Încercați din nou.");
+      }
+    }
+    void load();
     return () => controller.abort();
-  }, [loadCatalog, session]);
-  const categoryProducts = products.filter(
-    (product) =>
-      !isCategoryPage ||
-      (requestedSlug
-        ? categorySlug(product.categorie || "") === requestedSlug
-        : normalizeCatalogText(product.categorie) ===
-          normalizeCatalogText(category)),
-  );
-  const displayCategory = categoryProducts[0]?.categorie || category;
-  const facetCount = (field: "brand" | "material", value: string) =>
-    categoryProducts.filter(
-      (product) =>
-        normalizeCatalogText(product[field]) === normalizeCatalogText(value),
-    ).length;
-  const facetOptions = (field: CatalogField) =>
-    catalogOptions(field === "categorie" ? products : categoryProducts, field);
-  const filteredProducts = categoryProducts
-    .filter((product) =>
-      matchesCatalogFilters(product, {
-        query,
-        brands,
-        materials,
-        age,
-        stockOnly,
-        minPrice,
-        maxPrice,
-      }),
-    )
-    .sort((a, b) => compareProducts(a, b, sort));
+  }, [session, categoryName, requestedSlug, retry]);
+
+  useEffect(() => {
+    if (!session || !facetsReady) return;
+    const controller = new AbortController();
+    async function load() {
+      setLoading(true);
+      setError("");
+      try {
+        if (requestedSlug && resolvedCategory === undefined) {
+          setProducts([]);
+          setTotal(0);
+          return;
+        }
+        const archiveAvailable = await hasArchiveColumn(
+          supabase,
+          AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+        );
+        const {
+          data,
+          count,
+          error: failure,
+        } = await productPageQuery(
+          supabase,
+          {
+            query,
+            category: resolvedCategory,
+            brands,
+            materials,
+            age,
+            stockOnly,
+            minPrice,
+            maxPrice,
+            sort,
+            page: currentPage,
+            pageSize,
+          },
+          false,
+          archiveAvailable,
+        )
+          .abortSignal(
+            AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+          )
+          .overrideTypes<ProductCard[], { merge: false }>();
+        if (controller.signal.aborted) return;
+        if (failure) throw failure;
+        const lastPage = Math.max(1, Math.ceil((count ?? 0) / pageSize));
+        if (currentPage > lastPage) {
+          setPagination({ key: pageKey, page: lastPage });
+          return;
+        }
+        setProducts(data ?? []);
+        setTotal(count ?? 0);
+      } catch {
+        if (!controller.signal.aborted)
+          setError(
+            "Catalogul nu poate fi încărcat momentan. Verificați conexiunea și încercați din nou.",
+          );
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoadedKey(`${pageKey}:${currentPage}`);
+          setLoading(false);
+        }
+      }
+    }
+    // Debounce typing and cancel obsolete responses on every filter/page change.
+    const timer = setTimeout(() => void load(), 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    session,
+    facetsReady,
+    query,
+    resolvedCategory,
+    requestedSlug,
+    brands,
+    materials,
+    age,
+    stockOnly,
+    minPrice,
+    maxPrice,
+    sort,
+    currentPage,
+    pageSize,
+    pageKey,
+    retry,
+  ]);
+
+  useEffect(() => {
+    if (!favoritesOpen || !session) return;
+    const controller = new AbortController();
+    async function load() {
+      setFavoritesLoading(true);
+      setFavoritesLoadError("");
+      try {
+        const data = await loadFavoriteProducts(
+          supabase,
+          favorites,
+          AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+        );
+        if (!controller.signal.aborted) setFavoriteProducts(data);
+      } catch {
+        if (!controller.signal.aborted)
+          setFavoritesLoadError("Favoritele nu pot fi încărcate.");
+      } finally {
+        if (!controller.signal.aborted) setFavoritesLoading(false);
+      }
+    }
+    void load();
+    return () => controller.abort();
+  }, [favoritesOpen, favorites, session]);
   const resetFilters = () => {
     setQuery("");
     setMinPrice("");
@@ -155,36 +278,13 @@ export default function Storefront({
   };
   const hasActiveFilters = Boolean(
     query ||
-      brands.length ||
-      materials.length ||
-      age ||
-      stockOnly ||
-      minPrice ||
-      maxPrice,
-  );
-  const pageKey = JSON.stringify([
-    query,
-    category,
-    brands,
-    materials,
-    age,
-    stockOnly,
-    sort,
-    minPrice,
+    brands.length ||
+    materials.length ||
+    age ||
+    stockOnly ||
+    minPrice ||
     maxPrice,
-    pageSize,
-  ]);
-  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
-  const currentPage = Math.min(
-    pageCount,
-    pagination.key === pageKey ? pagination.page : 1,
   );
-  const pageProducts = isCategoryPage
-    ? filteredProducts.slice(
-        (currentPage - 1) * pageSize,
-        currentPage * pageSize,
-      )
-    : filteredProducts;
   const changePage = (page: number) => {
     setPagination({ key: pageKey, page });
     document.getElementById("catalog")?.scrollIntoView({
@@ -225,10 +325,7 @@ export default function Storefront({
                       )
                     }
                   />
-                  <span>
-                    {v}{" "}
-                    <span className={s.muted}>({facetCount(field, v)})</span>
-                  </span>
+                  <span>{v} </span>
                 </label>
               ))}
               {!facetOptions(field).length && (
@@ -559,8 +656,7 @@ export default function Storefront({
               <h1>{displayCategory}</h1>
               {!loading && !error && (
                 <span className={s.countBadge}>
-                  ({categoryProducts.length}{" "}
-                  {categoryProducts.length === 1 ? "produs" : "produse"})
+                  ({total} {total === 1 ? "produs" : "produse"})
                 </span>
               )}
             </div>
@@ -648,7 +744,7 @@ export default function Storefront({
                     ? "Se încarcă produsele…"
                     : error
                       ? "Catalog indisponibil"
-                      : `${filteredProducts.length} ${filteredProducts.length === 1 ? "produs" : "produse"}`}
+                      : `${total} ${total === 1 ? "produs" : "produse"}`}
                   {hasActiveFilters && !loading && (
                     <button className={s.textButton} onClick={resetFilters}>
                       Șterge filtrele
@@ -683,7 +779,7 @@ export default function Storefront({
                   </label>
                 )}
               </div>
-              {loading ? (
+              {loading && !error ? (
                 <div className={s.grid} aria-busy="true">
                   {[1, 2, 3, 4].map((i) => (
                     <div className={s.skeleton} key={i} />
@@ -699,13 +795,13 @@ export default function Storefront({
                     onClick={() => {
                       setLoading(true);
                       setError("");
-                      void loadCatalog();
+                      setRetry((value) => value + 1);
                     }}
                   >
                     Reîncearcă
                   </button>
                 </div>
-              ) : filteredProducts.length === 0 ? (
+              ) : total === 0 ? (
                 <div className={s.empty}>
                   <span aria-hidden="true">⌕</span>
                   <h3>
@@ -726,7 +822,7 @@ export default function Storefront({
                 </div>
               ) : (
                 <div className={s.grid}>
-                  {pageProducts.map((product) => (
+                  {products.map((product) => (
                     <article key={product.id} className={s.card}>
                       <button
                         className={s.favoriteButton}
@@ -742,11 +838,16 @@ export default function Storefront({
                             .closest("article")
                             ?.querySelector<HTMLElement>(`.${s.cardImage}`);
                           if (source) {
-                            const isMobile = window.matchMedia("(max-width: 767px)").matches;
+                            const isMobile =
+                              window.matchMedia("(max-width: 767px)").matches;
                             fly(
                               source,
-                              isMobile ? mobileWishlistTarget.current : wishlistIcon.current,
-                              isMobile ? mobileWishlistTarget.current : wishlistBadge.current,
+                              isMobile
+                                ? mobileWishlistTarget.current
+                                : wishlistIcon.current,
+                              isMobile
+                                ? mobileWishlistTarget.current
+                                : wishlistBadge.current,
                             );
                           }
                         }}
@@ -853,58 +954,55 @@ export default function Storefront({
                   ))}
                 </div>
               )}
-              {isCategoryPage &&
-                !loading &&
-                !error &&
-                filteredProducts.length > 0 && (
-                  <nav className={s.pagination} aria-label="Paginare produse">
-                    <div>
-                      <button
-                        disabled={currentPage === 1}
-                        onClick={() => changePage(currentPage - 1)}
-                        aria-label="Pagina precedentă"
-                      >
-                        ←
-                      </button>
-                      {Array.from({ length: pageCount }, (_, i) => i + 1)
-                        .filter(
-                          (n) =>
-                            n === 1 ||
-                            n === pageCount ||
-                            Math.abs(n - currentPage) <= 1,
-                        )
-                        .map((n, i, a) => (
-                          <span key={n}>
-                            {i > 0 && n - a[i - 1] > 1 && <span>…</span>}
-                            <button
-                              aria-label={`Pagina ${n}`}
-                              aria-current={
-                                currentPage === n ? "page" : undefined
-                              }
-                              onClick={() => changePage(n)}
-                            >
-                              {n}
-                            </button>
-                          </span>
-                        ))}
-                      <button
-                        disabled={currentPage === pageCount}
-                        onClick={() => changePage(currentPage + 1)}
-                        aria-label="Pagina următoare"
-                      >
-                        →
-                      </button>
-                    </div>
-                    <span>
-                      {(currentPage - 1) * pageSize + 1}–
-                      {Math.min(
-                        currentPage * pageSize,
-                        filteredProducts.length,
-                      )}{" "}
-                      din {filteredProducts.length}
-                    </span>
-                  </nav>
-                )}
+              {!loading && !error && total > 0 && (
+                <nav className={s.pagination} aria-label="Paginare produse">
+                  <div>
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => changePage(currentPage - 1)}
+                      aria-label="Pagina precedentă"
+                    >
+                      ←
+                    </button>
+                    {[
+                      ...new Set([
+                        1,
+                        currentPage - 1,
+                        currentPage,
+                        currentPage + 1,
+                        pageCount,
+                      ]),
+                    ]
+                      .filter((n) => n >= 1 && n <= pageCount)
+                      .sort((a, b) => a - b)
+                      .map((n, i, a) => (
+                        <span key={n}>
+                          {i > 0 && n - a[i - 1] > 1 && <span>…</span>}
+                          <button
+                            aria-label={`Pagina ${n}`}
+                            aria-current={
+                              currentPage === n ? "page" : undefined
+                            }
+                            onClick={() => changePage(n)}
+                          >
+                            {n}
+                          </button>
+                        </span>
+                      ))}
+                    <button
+                      disabled={currentPage === pageCount}
+                      onClick={() => changePage(currentPage + 1)}
+                      aria-label="Pagina următoare"
+                    >
+                      →
+                    </button>
+                  </div>
+                  <span>
+                    {(currentPage - 1) * pageSize + 1}–
+                    {Math.min(currentPage * pageSize, total)} din {total}
+                  </span>
+                </nav>
+              )}
             </div>
           </div>
         </section>
@@ -937,10 +1035,7 @@ export default function Storefront({
         <small>© {new Date().getFullYear()} ToyLogix</small>
       </footer>
       {isCategoryPage && filtersOpen && (
-        <FilterDrawer
-          close={() => setFiltersOpen(false)}
-          count={filteredProducts.length}
-        >
+        <FilterDrawer close={() => setFiltersOpen(false)} count={total}>
           {filterControls}
         </FilterDrawer>
       )}
@@ -953,11 +1048,9 @@ export default function Storefront({
       )}
       {favoritesOpen && (
         <FavoritesDialog
-          products={products.filter((product) =>
-            favorites.includes(product.id),
-          )}
-          loading={loading}
-          error={error}
+          products={favoriteProducts}
+          loading={favoritesLoading}
+          error={favoritesLoadError}
           favoriteError={favoriteError}
           close={() => setFavoritesOpen(false)}
           remove={toggleFavorite}

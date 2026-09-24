@@ -8,6 +8,8 @@ export const movementLabels = {
 
 export type MovementType = keyof typeof movementLabels;
 export type StockMovement = {
+  product_name?: string;
+  actor_name?: string;
   id: string;
   product_id: number;
   movement_type: MovementType;

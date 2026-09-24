@@ -1,14 +1,17 @@
 import type { NextConfig } from "next";
+import { readServerEnv } from "./lib/env-validation.ts";
+import { securityHeaders } from "./lib/security-headers.ts";
 
-if (process.env.NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED === "true") {
-  const required = ["SUPABASE_SERVICE_ROLE_KEY", "AUTH_SITE_URL", "AUTH_RATE_LIMIT_SECRET"];
-  const missing = required.filter((name) => !process.env[name]);
-  if (missing.length || (process.env.AUTH_RATE_LIMIT_SECRET?.length ?? 0) < 32)
-    throw new Error("Account hardening requires all server credentials and a rate-limit secret of at least 32 characters before deployment.");
-}
+readServerEnv(process.env);
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [new URL("/storage/v1/object/public/product-images/**", process.env.NEXT_PUBLIC_SUPABASE_URL!)],
+  },
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders(process.env.NODE_ENV === "production") }];
+  },
 };
 
 export default nextConfig;
