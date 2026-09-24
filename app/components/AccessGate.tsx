@@ -19,7 +19,7 @@ export default function AccessGate({
       try {
         const profile = await currentAccount();
         if (!active) return;
-        if (!profile || !profile.is_active) {
+        if (!profile || profile.is_active === false) {
           setAllowed(false);
           router.replace("/login");
           return;

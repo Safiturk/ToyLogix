@@ -78,7 +78,8 @@ export default function AdminDashboard() {
           supabase
             .from("utilizatori")
             .select(accountColumns)
-            .order("id", { ascending: false }),
+            .order("id", { ascending: false })
+            .overrideTypes<AdminAccount[], { merge: false }>(),
         ]);
         if (active) {
           if (products.error)
@@ -117,7 +118,8 @@ export default function AdminDashboard() {
     const { data } = await supabase
       .from("utilizatori")
       .select(accountColumns)
-      .order("id", { ascending: false });
+      .order("id", { ascending: false })
+      .overrideTypes<AdminAccount[], { merge: false }>();
     if (data) setAccounts(data);
     setAuditVersion((value) => value + 1);
   };

@@ -1,5 +1,18 @@
 # Supabase Auth rollout
 
+## Login hotfix — 2026-09-24
+
+The hosted database still uses the September 19 schema (no `is_active` or
+`consume_auth_rate_limit`). Until the coordinated hardening rollout is complete,
+leave `NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED` unset or `false`. Login, signup and
+reset use Supabase Auth with its provider limits; existing RLS and approval checks
+remain in force. Admin routing checks the actual database authorization RPC.
+The new application-level persistent limiter is only active in hardening mode.
+
+After applying the migrations and configuring all server variables, set
+`NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED=true` and rebuild. The build rejects
+hardening mode without its server configuration; never enable it before migration.
+
 ## Local hardening revision (2026-09-23, not published)
 
 The current working revision additionally requires

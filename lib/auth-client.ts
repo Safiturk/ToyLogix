@@ -1,10 +1,38 @@
 import { supabase } from "./supabase";
+import { accountHardeningEnabled } from "./auth-rollout";
 
 export async function authPost(
   path: string,
   body: Record<string, unknown>,
   authenticated = false,
 ) {
+  if (!accountHardeningEnabled && !authenticated) {
+    const email = String(body.email ?? "");
+    if (path === "/api/auth/reset") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`,
+      });
+      if (error) throw error;
+      return { ok: true };
+    }
+    if (path === "/api/auth/signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: String(body.password ?? ""),
+        options: {
+          emailRedirectTo: `${window.location.origin}/email-confirmed`,
+          data: {
+            nume_complet: body.name,
+            telefon: body.phone,
+            nume_firma: body.company,
+          },
+        },
+      });
+      if (error) throw error;
+      if (data.session) await supabase.auth.signOut({ scope: "local" });
+      return { ok: true, needsEmailConfirmation: true };
+    }
+  }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -26,6 +54,8 @@ export async function authPost(
 }
 
 export async function passwordLogin(email: string, password: string) {
+  if (!accountHardeningEnabled)
+    return supabase.auth.signInWithPassword({ email, password });
   const data = await authPost("/api/auth/login", { email, password });
   return supabase.auth.setSession(data.session);
 }

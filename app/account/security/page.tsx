@@ -32,7 +32,7 @@ export default function AccountSecurityPage() {
       try {
         const account = await currentAccount();
         if (!active) return;
-        if (!account || !account.is_active) {
+        if (!account || account.is_active === false) {
           router.replace("/login");
           return;
         }

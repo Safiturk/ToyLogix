@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase, initialAuthLink } from "@/lib/supabase";
 import { authPost, passwordLogin } from "@/lib/auth-client";
 import { accountDestination, isRecoveryLink } from "@/lib/security-rules";
-import { accountColumns, signOutAccount } from "@/lib/account";
+import { accountColumns, signOutAccount, type Account } from "@/lib/account";
 import { hasPasswordComplexity } from "@/lib/auth-validation";
 import s from "./account-access.module.css";
 import BrandLogo from "./BrandLogo";
@@ -193,7 +193,8 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
         .select(accountColumns)
         .eq("auth_user_id", auth.user.id)
         .abortSignal(AbortSignal.timeout(15000))
-        .maybeSingle();
+        .maybeSingle()
+        .overrideTypes<Account | null, { merge: false }>();
       if (
         profileError ||
         !profile ||
@@ -213,7 +214,13 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
       localStorage.removeItem("admin_authenticated");
       window.dispatchEvent(new Event("toylogix-session"));
       // Pending partners can complete their own billing details, but not enter the catalog.
-      router.replace(accountDestination(profile));
+      let adminVerified = false;
+      if (profile.rol === "admin") {
+        const { data, error } = await supabase.rpc("toylogix_is_admin");
+        if (error) throw error;
+        adminVerified = data === true;
+      }
+      router.replace(accountDestination(profile, adminVerified));
     } catch (failure) {
       setError(
         failure instanceof Error

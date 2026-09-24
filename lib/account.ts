@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { accountHardeningEnabled } from "./auth-rollout";
 export type Account = {
   id: number;
   auth_user_id: string;
@@ -8,10 +9,11 @@ export type Account = {
   nume_firma: string | null;
   rol: "admin" | "user";
   status: "pending" | "approved" | "rejected";
-  is_active: boolean;
+  is_active?: boolean;
 };
-export const accountColumns =
-  "id,auth_user_id,nume_complet,email,telefon,nume_firma,rol,status,is_active";
+export const accountColumns: string = accountHardeningEnabled
+  ? "id,auth_user_id,nume_complet,email,telefon,nume_firma,rol,status,is_active"
+  : "id,auth_user_id,nume_complet,email,telefon,nume_firma,rol,status";
 export async function currentAccount(): Promise<Account | null> {
   const {
     data: { user },
