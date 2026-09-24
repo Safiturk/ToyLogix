@@ -45,3 +45,25 @@ test("hardened deployment installs only server-issued session", async () => {
   }, async () => ({ ok: true, json: async () => ({ session }) }));
   assert.deepEqual(await api.passwordLogin("test@example.com", "test-only"), { error: null });
 });
+
+test("legacy account deletion uses authenticated Edge Function without Next server secrets", async () => {
+  const api = client(false, {
+    getSession: async () => ({ data: { session: { access_token: "test-access" } } }),
+  }, async (url, options) => {
+    assert.equal(url, `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`);
+    assert.equal(options.headers.Authorization, "Bearer test-access");
+    assert.equal(options.body, '{"profileId":2}');
+    return { ok: true, json: async () => ({ ok: true }) };
+  });
+  assert.deepEqual(await api.authPost("/api/admin/accounts/delete", { profileId: 2 }, true), { ok: true });
+});
+
+test("hardened account deletion retains its server route and does not fall back on error", async () => {
+  const api = client(true, {
+    getSession: async () => ({ data: { session: { access_token: "test-access" } } }),
+  }, async (url) => {
+    assert.equal(url, "/api/admin/accounts/delete");
+    return { ok: false, json: async () => ({ error: "History retained" }) };
+  });
+  await assert.rejects(api.authPost("/api/admin/accounts/delete", { profileId: 2 }, true), /History retained/);
+});

@@ -1,5 +1,26 @@
 # Supabase Auth rollout
 
+## Account deletion hotfix — 2026-09-24
+
+Before the full hardening rollout, authenticated account deletion uses the
+`delete-account` Supabase Edge Function. Deploy `supabase/functions/delete-account`
+with JWT verification enabled and apply the standalone
+`20260924113302_account_delete_cascade.sql` migration before publishing the client.
+The Edge Function uses Supabase-provided server credentials; Netlify needs only
+the existing public Supabase URL/key for this path. No service key is sent to the
+browser. Full hardening still requires all server variables described below.
+
+The function verifies the Auth user and database admin role, blocks self-deletion,
+and rechecks the role before deleting. Preparation/MFA/history errors never fall
+back to the legacy path. Legacy handling requires both a specifically missing
+preparation RPC and confirmation that `is_active` is absent. Auth deletion removes
+its profile and billing atomically; existing retention foreign keys can block the
+whole deletion. Unlinked legacy profiles are deleted through the caller's RLS.
+When hardening is enabled, the client continues using the existing Next endpoint.
+
+This standalone migration can be applied without the stock/hardening migrations.
+It only changes the profile's Auth foreign key to cascade; it deletes no users.
+
 ## Login hotfix — 2026-09-24
 
 The hosted database still uses the September 19 schema (no `is_active` or

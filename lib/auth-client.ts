@@ -41,7 +41,14 @@ export async function authPost(
     if (!data.session) throw new Error("Autentificarea este necesară.");
     headers.Authorization = `Bearer ${data.session.access_token}`;
   }
-  const response = await fetch(path, {
+  // The pre-hardening deployment has no Next server secrets. Perform full
+  // account deletion in Supabase's authenticated server environment instead.
+  let endpoint = path;
+  if (!accountHardeningEnabled && authenticated && path === "/api/admin/accounts/delete") {
+    endpoint = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`;
+    headers.apikey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  }
+  const response = await fetch(endpoint, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
