@@ -1,4 +1,3 @@
-/** Open a modal and restore the page's scroll and focus when it unmounts. */
 export function openDialog(dialog: HTMLDialogElement | null) {
   const previousFocus = document.activeElement as HTMLElement | null;
   const previousOverflow = document.body.style.overflow;

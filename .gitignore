@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnpm-store/
@@ -13,6 +11,9 @@
 
 # testing
 /coverage
+/tmp/
+/test-results/
+/playwright-report/
 
 # next.js
 /.next/
@@ -20,18 +21,27 @@
 
 # production
 /build
+/dist/
 
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
+Thumbs.db
+Desktop.ini
+/.idea/
+/.vscode/
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
+# local configuration
 .env*
 !.env.example
 
@@ -42,3 +52,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /supabase/.temp/
+/supabase/.branches/
+/.netlify/

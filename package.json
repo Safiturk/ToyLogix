@@ -12,10 +12,11 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.111.0",
+    "@supabase/supabase-js": "2.111.0",
     "@zxing/library": "^0.23.0",
     "exceljs": "^4.4.0",
-    "html5-qrcode": "^2.3.8",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "next": "16.3.6",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -31,5 +32,15 @@
     "eslint-config-next": "16.3.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "description": "B2B toy catalog, inventory management, and PDF order requests.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   }
 }

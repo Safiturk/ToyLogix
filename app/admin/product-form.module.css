@@ -76,7 +76,7 @@
 .saveButton { min-height: 46px; padding: 12px 24px; border: 1px solid var(--accent); border-radius: 7px; background: var(--accent); color: white; font-size: 13px; font-weight: 600; box-shadow: 0 3px 8px #6546c821; }
 .saveButton:hover:not(:disabled) { background: #5034ad; box-shadow: 0 5px 14px #6546c830; }
 .saveButton:disabled { opacity: 0.6; cursor: wait; box-shadow: none; }
-@media (min-width: 1280px) { .detailsGrid { grid-template-columns: 1.15fr 1.4fr 1fr 1fr; } .pricingGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .detailsGrid { grid-template-columns: 1.15fr 1.4fr 1fr 1fr; } .pricingGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 @media (max-width: 640px) {
   .heading { padding: 24px 20px; }
   .heading h2 { font-size: 21px; }

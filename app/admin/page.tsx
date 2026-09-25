@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import BarcodeScanner from "../components/BarcodeScanner";
 import formStyles from "./product-form.module.css";
 import OnlinePanel from "./OnlinePanel";
@@ -24,7 +25,7 @@ import ProductInventory from "./ProductInventory";
 import StockManagement from "./StockManagement";
 import AuditHistory from "./AuditHistory";
 import { authPost } from "@/lib/auth-client";
-import { archiveProduct as setProductArchived } from "@/lib/stock";
+import { archiveProduct as setProductArchived, recordStockMovement } from "@/lib/stock";
 import { productMetadata, stockError } from "@/lib/stock-rules";
 import {
   type InventoryProduct,
@@ -322,27 +323,47 @@ export default function AdminDashboard() {
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (savingProduct || uploadingImages) return;
+    if (!editingId && (!Number.isSafeInteger(form.stoc_actual) || form.stoc_actual < 0 || form.stoc_actual > 2147483647)) {
+      alert("Stocul trebuie să fie un număr întreg între 0 și 2147483647.");
+      return;
+    }
     if (form.imagini?.some((image) => !isProductImageUrl(image))) { alert("Încărcați imaginile în Storage înainte de salvare."); return; }
     setSavingProduct(true);
     const metadata = productMetadata({ ...form });
-    const { error } = editingId
-      ? await supabase.from("produse").update(metadata).eq("id", editingId)
-      : await supabase.from("produse").insert([metadata]);
-    if (error) {
+    try {
+      const { data, error } = editingId
+        ? await supabase.from("produse").update(metadata).eq("id", editingId).select("id").single()
+        : await supabase.from("produse").insert([metadata]).select("id").single();
+      if (error) throw error;
+      if (!editingId && form.stoc_actual > 0) {
+        try {
+          await recordStockMovement({
+            productId: data.id,
+            type: "stock_in",
+            amount: form.stoc_actual,
+            currentStock: 0,
+            reason: "Stoc inițial la adăugarea produsului",
+          });
+        } catch (stockFailure) {
+          // The product exists even if the separate stock request fails.
+          // Clear the creation form so retrying cannot create a duplicate.
+          cancelEdit();
+          await refreshProducts();
+          showStockHistory(data.id);
+          alert("Produsul a fost creat, dar stocul inițial nu a fost confirmat. Verifică istoricul înainte de a înregistra o nouă intrare. " + stockError(stockFailure));
+          return;
+        }
+      }
       alert(
-        (editingId ? "Eroare la actualizare: " : "Eroare la salvare: ") +
-          error.message,
+        editingId ? "Produs actualizat cu succes!" : "Produs salvat cu succes!",
       );
+      cancelEdit();
+      await refreshProducts();
+    } catch (error) {
+      alert(stockError(error));
+    } finally {
       setSavingProduct(false);
-      return;
     }
-    alert(
-      editingId ? "Produs actualizat cu succes!" : "Produs salvat cu succes!",
-    );
-    if (editingId) setEditingId(null);
-    setForm(createProductDraft());
-    refreshProducts();
-    setSavingProduct(false);
   };
 
   const exportToExcel = async () => {
@@ -976,7 +997,10 @@ export default function AdminDashboard() {
                           key={idx}
                           className="relative w-20 h-20 border rounded-lg overflow-hidden group bg-white shadow-sm flex-shrink-0"
                         >
-                          <img
+                          <Image
+                            width={80}
+                            height={80}
+                            unoptimized
                             src={img}
                             alt=""
                             className="w-full h-full object-cover"
@@ -1088,9 +1112,37 @@ export default function AdminDashboard() {
                     className="w-full p-2.5 border rounded-xl text-xs font-bold bg-amber-50 border-amber-300 outline-none"
                   />
                   <p className="mt-2 text-xs text-slate-500">
-                    Stocul se modifică din „Stoc și istoric mișcări”. Produsele
-                    noi pornesc de la zero.
+                    Limita sub care produsul este semnalat cu stoc critic.
                   </p>
+                </div>
+                <div>
+                  <label htmlFor="product-stock" className="block text-xs font-bold mb-1">
+                    {editingId ? "Stoc actual (bucăți)" : "Stoc inițial (bucăți)"}
+                  </label>
+                  <input
+                    id="product-stock"
+                    type="number"
+                    min="0"
+                    max="2147483647"
+                    step="1"
+                    required
+                    readOnly={!!editingId}
+                    disabled={savingProduct}
+                    value={form.stoc_actual}
+                    onChange={(e) => setForm({ ...form, stoc_actual: Number(e.target.value) })}
+                    aria-describedby="product-stock-help"
+                    className="w-full p-2.5 border rounded-xl text-xs outline-none"
+                  />
+                  <p id="product-stock-help" className="mt-2 text-xs text-slate-500">
+                    {editingId
+                      ? "Pentru modificări, folosește „Stoc și istoric mișcări”."
+                      : "Cantitatea disponibilă se înregistrează ca intrare la salvare."}
+                  </p>
+                  {editingId && (
+                    <button type="button" onClick={() => showStockHistory(editingId)} className="mt-2 text-xs font-bold text-violet-700 underline">
+                      Modifică stocul
+                    </button>
+                  )}
                 </div>
               </div>
 

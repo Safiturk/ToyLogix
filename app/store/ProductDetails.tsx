@@ -7,6 +7,7 @@ import {
   productImages,
   formatPrice,
 } from "@/lib/catalog";
+import { AddToCart } from "./CartControls";
 import ProductPicture from "./ProductPicture";
 import s from "../customer.module.css";
 import { useWishlistMotion } from "./useWishlistMotion";
@@ -184,6 +185,7 @@ export default function ProductDetails({
                 <b>{product.bucati_per_cutie || "—"} bucăți / cutie</b>
               </span>
             </div>
+            <AddToCart product={product} />
             <dl className={s.specifications}>
               {[
                 ["Cod de bare", detail?.cod_bara],

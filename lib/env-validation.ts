@@ -21,7 +21,7 @@ export function readPublicEnv(env: Environment) {
     catch { throw new Error("Invalid public Supabase key"); }
     if (role !== "anon") throw new Error("Only an anon/publishable key may be public");
   } else if (!key.startsWith("sb_publishable_")) throw new Error("Invalid public Supabase key");
-  const hardening = env.NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED ?? "false";
+  const hardening = env.NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED?.trim() || "false";
   if (!["true", "false"].includes(hardening)) throw new Error("Invalid account hardening flag");
   return { url, key, hardening: hardening === "true" };
 }

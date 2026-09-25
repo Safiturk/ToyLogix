@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import type { InventoryProduct } from "./models";
 import { supabase } from "@/lib/supabase";
 import { hasArchiveColumn, productPageQuery } from "@/lib/catalog-query";
@@ -137,11 +138,14 @@ export default function ProductInventory({
                   <tr key={product.id} className="hover:bg-slate-50">
                     <td className="p-3">
                       <div className="w-10 h-10 rounded-lg border overflow-hidden bg-slate-100">
-                        <img
+                        <Image
+                          width={40}
+                          height={40}
+                          unoptimized
                           src={
                             product.imagini && product.imagini.length > 0
                               ? product.imagini[0]
-                              : "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=100&q=80"
+                              : "/toylogix-logo.svg"
                           }
                           alt=""
                           className="w-full h-full object-cover"

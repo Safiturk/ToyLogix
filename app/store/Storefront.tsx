@@ -28,6 +28,7 @@ import ProductPicture from "./ProductPicture";
 import FavoritesDialog from "./FavoritesDialog";
 import MobileAccountMenu from "./MobileAccountMenu";
 import ProductDetails from "./ProductDetails";
+import { AddToCart, CartLink } from "./CartControls";
 import { useStoreSession, parseStoreSession } from "./useStoreSession";
 import { useFavorites } from "./useFavorites";
 
@@ -589,6 +590,7 @@ export default function Storefront({
           </nav>
         </div>
       </header>
+      <CartLink />
       <main className={s.container}>
         {!isCategoryPage && (
           <section className={s.hero} aria-labelledby="hero-title">
@@ -950,6 +952,7 @@ export default function Storefront({
                           </div>
                         </div>
                       </button>
+                      <AddToCart product={product} />
                     </article>
                   ))}
                 </div>

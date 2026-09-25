@@ -12,6 +12,7 @@ test("public config refuses server credentials and unsafe origins", () => {
   assert.throws(() => readServerEnv({ ...env, NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED: "true" }));
   assert.throws(() => readServerEnv({ ...env, RESEND_API_KEY: "re_test" }));
   assert.equal(readPublicEnv(env).url, env.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal(readPublicEnv({ ...env, NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED: "" }).hardening, false);
 });
 test("production headers deny framing and MIME sniffing and use HSTS", () => {
   const headers = Object.fromEntries(securityHeaders(true).map(({ key, value }) => [key, value]));

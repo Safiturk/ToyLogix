@@ -36,8 +36,7 @@ export default function BarcodeScanner({
             onScanSuccess(code);
           }
         })
-        .catch((err) => {
-          console.error(err);
+        .catch(() => {
           setErrorMsg(
             "Kamera başlatılamadı. Lütfen kamera izinlerini kontrol edin.",
           );

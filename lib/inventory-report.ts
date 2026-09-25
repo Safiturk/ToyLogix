@@ -10,8 +10,8 @@ export interface InventoryRow {
 }
 
 export async function createInventoryReport(products: InventoryRow[]) {
-  const { Workbook } = await import("exceljs");
-  const workbook = new Workbook();
+  const { default: ExcelJS } = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
   workbook.creator = "ToyLogix";
   const sheet = workbook.addWorksheet("Inventar", {
     views: [{ state: "frozen", ySplit: 1 }],
