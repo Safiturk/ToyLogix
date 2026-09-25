@@ -92,13 +92,35 @@ export function productPageQuery(
   return query.range(from, from + size - 1);
 }
 
-// Facets are grouped in PostgreSQL, independently of the displayed product page.
+async function loadLegacyFacet(client: SupabaseClient, field: CatalogField, signal: AbortSignal, category?: string) {
+  const archiveAvailable = await hasArchiveColumn(client, signal);
+  const values = new Set<string>();
+  for (let offset = 0; ; ) {
+    let query = client.from("produse").select(`id,${field}`).order("id");
+    if (archiveAvailable) query = query.eq("is_archived", false);
+    if (category !== undefined) query = query.eq("categorie", category);
+    const { data, error } = await query.range(offset, offset + 499).abortSignal(signal)
+      .overrideTypes<Record<string, unknown>[], { merge: false }>();
+    if (error) throw error;
+    if (!Array.isArray(data)) throw new Error("Invalid facet response");
+    if (!data.length) return [...values].sort((a, b) => a.localeCompare(b, "ro"));
+    for (const row of data) {
+      const value = row[field];
+      if (typeof value === "string" && value.trim()) values.add(value);
+    }
+    offset += data.length;
+  }
+}
+
 export async function loadFacet(client: SupabaseClient, field: CatalogField, signal: AbortSignal, category?: string) {
   const values: string[] = [];
   for (let offset = 0; ; ) {
     const { data, error } = await client.rpc("catalog_facets", { p_category: category ?? null })
       .eq("field", field).order("value").range(offset, offset + 499).abortSignal(signal)
       .overrideTypes<{ value: string }[], { merge: false }>();
+    // Older deployments have the product table but not the facet RPC yet.
+    if (error?.code === "PGRST202" && error.message.includes("catalog_facets"))
+      return loadLegacyFacet(client, field, signal, category);
     if (error) throw error;
     if (!Array.isArray(data)) throw new Error("Invalid facet response");
     if (!data.length) return values;

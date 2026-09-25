@@ -100,7 +100,7 @@ export default function Storefront({
     ? facets.categorie.find((value) => categorySlug(value) === requestedSlug)
     : categoryName;
   const displayCategory = resolvedCategory ?? category;
-  const error = catalogError || facetError;
+  const error = catalogError || (requestedSlug ? facetError : "");
   const facetOptions = (field: CatalogField) => facets[field];
   const pageKey = JSON.stringify([
     query,
@@ -116,7 +116,7 @@ export default function Storefront({
     pageSize,
   ]);
   const currentPage = pagination.key === pageKey ? pagination.page : 1;
-  const loading = fetching || loadedKey !== `${pageKey}:${currentPage}`;
+  const loading = !error && (fetching || loadedKey !== `${pageKey}:${currentPage}`);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   useEffect(() => {
@@ -158,7 +158,7 @@ export default function Storefront({
   }, [session, categoryName, requestedSlug, retry]);
 
   useEffect(() => {
-    if (!session || !facetsReady) return;
+    if (!session || (requestedSlug && !facetsReady)) return;
     const controller = new AbortController();
     async function load() {
       setLoading(true);
@@ -589,8 +589,8 @@ export default function Storefront({
             )}
           </nav>
         </div>
+        <CartLink />
       </header>
-      <CartLink />
       <main className={s.container}>
         {!isCategoryPage && (
           <section className={s.hero} aria-labelledby="hero-title">
@@ -738,6 +738,14 @@ export default function Storefront({
               {favoriteError && (
                 <p role="alert" className={s.priceWarning}>
                   {favoriteError}
+                </p>
+              )}
+              {facetError && !requestedSlug && (
+                <p role="alert" className={s.priceWarning}>
+                  {facetError}{" "}
+                  <button className={s.textButton} onClick={() => setRetry((value) => value + 1)}>
+                    Reîncearcă
+                  </button>
                 </p>
               )}
               <div className={s.resultRow}>

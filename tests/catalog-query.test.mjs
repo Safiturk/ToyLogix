@@ -185,3 +185,37 @@ test("favorites query all saved IDs in bounded batches independently of catalog 
   );
   assert.equal(requests.at(-1).url.searchParams.get("limit"), "50");
 });
+
+test("missing facet RPC falls back to paged metadata on legacy schemas", async () => {
+  const { client, requests } = fixture(({ url }) => {
+    if (url.pathname.endsWith("/rpc/catalog_facets"))
+      return { status: 404, data: { code: "PGRST202", message: "Could not find public.catalog_facets(p_category)" } };
+    if (url.searchParams.get("select") === "is_archived")
+      return { status: 400, data: { code: "42703", message: "column produse.is_archived does not exist" } };
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+    return { data: offset === 0 ? [{ id: 1, brand: "Z" }, { id: 2, brand: "A" }] : offset === 2 ? [{ id: 3, brand: "A" }, { id: 4, brand: " " }] : [] };
+  });
+  assert.deepEqual(await loadFacet(client, "brand", new AbortController().signal, "Puzzle"), ["A", "Z"]);
+  for (const { url } of requests.slice(2)) {
+    assert.equal(url.searchParams.get("select"), "id,brand");
+    assert.equal(url.searchParams.get("categorie"), "eq.Puzzle");
+    assert.equal(url.searchParams.get("is_archived"), null);
+    assert.equal(url.searchParams.get("order"), "id.asc");
+  }
+});
+
+test("legacy facet fallback excludes archived products when supported", async () => {
+  const { client, requests } = fixture(({ url }) => url.pathname.endsWith("/rpc/catalog_facets")
+    ? { status: 404, data: { code: "PGRST202", message: "Missing catalog_facets" } }
+    : { data: [] });
+  await loadFacet(client, "categorie", new AbortController().signal);
+  assert.equal(requests.at(-1).url.searchParams.get("is_archived"), "eq.false");
+});
+
+test("facet permission and network errors never trigger a legacy fallback", async () => {
+  for (const code of ["42501", "PGRST301", "57014"]) {
+    const { client, requests } = fixture(() => ({ status: 403, data: { code, message: "catalog_facets failed" } }));
+    await assert.rejects(loadFacet(client, "brand", new AbortController().signal), { code });
+    assert.equal(requests.length, 1);
+  }
+});

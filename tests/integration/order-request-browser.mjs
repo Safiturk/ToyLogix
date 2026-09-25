@@ -5,6 +5,8 @@ import { readFile, mkdir } from "node:fs/promises";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || "playwright");
+const baseUrl = process.env.TEST_BASE_URL || "http://localhost:3100";
+const legacyCatalog = process.env.LEGACY_CATALOG === "true";
 const env = await readFile(".env.local", "utf8");
 const supabaseUrl = env.match(
   /^NEXT_PUBLIC_SUPABASE_URL\s*=\s*["']?([^\s"']+)/m,
@@ -63,6 +65,15 @@ await context.routeWebSocket(
 await context.route(`${supabaseUrl}/**`, async (route) => {
   const url = new URL(route.request().url());
 
+  if (legacyCatalog && url.pathname.includes("catalog_facets")) {
+    await route.fulfill({ status: 404, json: { code: "PGRST202", message: "Could not find public.catalog_facets(p_category)" } });
+    return;
+  }
+  if (legacyCatalog && url.searchParams.get("select") === "is_archived") {
+    await route.fulfill({ status: 400, json: { code: "42703", message: "column produse.is_archived does not exist" } });
+    return;
+  }
+
   let body = [];
   if (url.pathname.endsWith("/auth/v1/user"))
     body = {
@@ -76,6 +87,7 @@ await context.route(`${supabaseUrl}/**`, async (route) => {
   else if (url.pathname.endsWith("/billing_profiles")) body = billing;
   else if (url.pathname.endsWith("/produse")) {
     body = url.searchParams.get("limit") === "0" ? [] : products;
+    if (url.searchParams.get("select")?.startsWith("id,") && Number(url.searchParams.get("offset")) > 0) body = [];
     if (url.searchParams.get("id")?.startsWith("eq."))
       body = products.find(
         (p) => p.id === Number(url.searchParams.get("id").slice(3)),
@@ -136,7 +148,7 @@ page.on("pageerror", (error) => errors.push(error.message));
 page.on("console", (msg) => {
   if (msg.type() === "error") console.log(msg.text());
 });
-await page.goto("http://localhost:3100/store/cart", {
+await page.goto(`${baseUrl}/store/cart`, {
   waitUntil: "domcontentloaded",
   timeout: 30000,
 });
@@ -252,7 +264,7 @@ await page.getByRole("button", { name: "Golește coșul" }).click();
 await page.getByText("Coșul este gol.").waitFor();
 await page.reload();
 await page.getByText("Coșul este gol.").waitFor();
-await page.goto("http://localhost:3100/store");
+await page.goto(`${baseUrl}/store`);
 await page
   .getByRole("button", { name: "Adaugă în coș", exact: true })
   .first()
@@ -312,4 +324,25 @@ assert.deepEqual(errors, []);
 console.log(
   "PASS: 10 products, 500 boxes, account mapping, missing data, price refresh, PDF download, mailto, share success/cancel/denied/unsupported, edit/remove/clear, reload persistence, card/detail add, mobile overflow and desktop screenshots.",
 );
+await page.goto(`${baseUrl}/store`);
+await page.getByRole("button", { name: "Adaugă în coș", exact: true }).first().waitFor();
+await page.locator("#catalog").scrollIntoViewIfNeeded();
+const cartLink = page.getByRole("link", { name: /Coșul meu/ });
+const cartBounds = await cartLink.boundingBox();
+assert.ok(cartBounds && cartBounds.y >= 0 && cartBounds.y + cartBounds.height < 844);
+await page.setViewportSize({ width: 390, height: 844 });
+await page.locator("#catalog").scrollIntoViewIfNeeded();
+const mobileCartBounds = await cartLink.boundingBox();
+assert.ok(mobileCartBounds && mobileCartBounds.y >= 0 && mobileCartBounds.y + mobileCartBounds.height < 844);
+assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+await page.goto(`${baseUrl}/category/jucarii`);
+await page.getByRole("button", { name: "Adaugă în coș", exact: true }).first().waitFor();
+await page.goto(`${baseUrl}/store`);
+await context.route(`${supabaseUrl}/rest/v1/rpc/catalog_facets*`, route =>
+  route.fulfill({ status: 403, json: { code: "42501", message: "permission denied" } }));
+await page.reload();
+await page.getByText("Filtrele nu pot fi încărcate.", { exact: false }).waitFor();
+await page.getByRole("button", { name: "Adaugă în coș", exact: true }).first().waitFor();
+assert.equal(await cartLink.count(), 1);
+console.log("PASS: catalog and cart remain available when facet loading fails; cart stays visible while scrolling.");
 await browser.close();
