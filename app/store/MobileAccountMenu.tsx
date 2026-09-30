@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type Ref } from "react";
 import Link from "next/link";
 import s from "../customer.module.css";
+import OrderNotifications from "@/app/components/OrderNotifications";
 
 export default function MobileAccountMenu({
   name,
@@ -76,6 +77,8 @@ export default function MobileAccountMenu({
         <Link href="/account" onClick={() => setOpen(false)}>
           Contul meu
         </Link>
+        <Link href="/store/orders" onClick={() => setOpen(false)}>Comenzile mele</Link>
+        <OrderNotifications admin={isAdmin} />
         {isAdmin && (
           <Link href="/admin" onClick={() => setOpen(false)}>
             Admin Panel <span aria-hidden="true">↗</span>

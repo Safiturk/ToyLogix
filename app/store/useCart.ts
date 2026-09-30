@@ -2,7 +2,7 @@
 import { useState, useSyncExternalStore } from "react";
 import type { ProductCard } from "@/lib/catalog";
 import {
-  MAX_BOXES,
+  maxCartBoxes,
   parseCart,
   validProduct,
   type CartLine,
@@ -32,7 +32,7 @@ export function useCart() {
     try {
       localStorage.setItem(
         key,
-        JSON.stringify(change(parseCart(localStorage.getItem(key)))),
+        JSON.stringify(parseCart(JSON.stringify(change(parseCart(localStorage.getItem(key)))))),
       );
       window.dispatchEvent(new Event("toylogix-cart"));
       setError("");
@@ -49,14 +49,25 @@ export function useCart() {
     raw,
     error,
     update,
+    changeBoxes(productId: number, delta: number, latestProduct?: ProductCard) {
+      if (!Number.isSafeInteger(delta)) return false;
+      return update((current) =>
+        current.flatMap((line) => {
+          if (line.product.id !== productId) return [line];
+          const product = latestProduct ?? line.product;
+          const boxes = Math.min(maxCartBoxes(product), line.boxes + delta);
+          return boxes > 0 ? [{ product, boxes }] : [];
+        }),
+      );
+    },
     add(product: ProductCard) {
-      if (!validProduct(product)) return false;
+      if (!validProduct(product) || maxCartBoxes(product) < 1) return false;
       return update((current) => {
         const existing = current.find((l) => l.product.id === product.id);
         return existing
           ? current.map((l) =>
               l.product.id === product.id
-                ? { product, boxes: Math.min(MAX_BOXES, l.boxes + 1) }
+                ? { product, boxes: Math.min(maxCartBoxes(product), l.boxes + 1) }
                 : l,
             )
           : [...current, { product, boxes: 1 }];

@@ -1,4 +1,5 @@
 "use client";
+import NumericInput from "@/app/components/NumericInput";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,6 +28,7 @@ import {
 import ProductPicture from "./ProductPicture";
 import FavoritesDialog from "./FavoritesDialog";
 import MobileAccountMenu from "./MobileAccountMenu";
+import OrderNotifications from "@/app/components/OrderNotifications";
 import ProductDetails from "./ProductDetails";
 import { AddToCart, CartLink } from "./CartControls";
 import { useStoreSession, parseStoreSession } from "./useStoreSession";
@@ -352,7 +354,7 @@ export default function Storefront({
         <summary>Preț en-gros (RON)</summary>
         <div className={s.facetOptions}>
           <div className={s.priceRange}>
-            <input
+            <NumericInput
               aria-label="Preț minim"
               type="number"
               min="0"
@@ -362,7 +364,7 @@ export default function Storefront({
               onChange={(e) => setMinPrice(e.target.value)}
             />
             <span>–</span>
-            <input
+            <NumericInput
               aria-label="Preț maxim"
               type="number"
               min="0"
@@ -513,6 +515,8 @@ export default function Storefront({
                   </span>{" "}
                   Favorite <b ref={wishlistBadge}>{favorites.length}</b>
                 </button>
+                <Link href="/store/orders" className={s.accountBadge}>Comenzile mele</Link>
+                <OrderNotifications admin={user.rol === "admin"} />
                 <Link
                   href="/account"
                   className={s.accountBadge}

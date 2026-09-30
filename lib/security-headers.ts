@@ -18,6 +18,7 @@ export function contentSecurityPolicy(nonce: string, supabaseUrl: string, produc
     "style-src 'self' 'unsafe-inline'",
     `connect-src 'self' ${origin} ${websocket}${production ? "" : " ws://localhost:* ws://127.0.0.1:*"}`,
     "img-src 'self' https: data: blob:",
+    `frame-src ${origin}`,
     "font-src 'self'", "worker-src 'self' blob:", "media-src 'self' blob:",
     "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'",
     ...(production ? ["upgrade-insecure-requests"] : []),

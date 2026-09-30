@@ -8,6 +8,7 @@ import {
   mailtoLink,
   parseCart,
   validProduct,
+  maxCartBoxes,
 } from "../lib/order-request.ts";
 
 const product = {
@@ -15,7 +16,24 @@ const product = {
   nume_produs: "Jucărie șină",
   bucati_per_cutie: 12,
   pret_engros: 19.99,
+  stoc_actual: 10000,
 };
+test("cart caps boxes at stock independently of pack size and repairs stored excess", () => {
+  const single = { ...product, stoc_actual: 20, bucati_per_cutie: 1 };
+  assert.equal(maxCartBoxes(single), 20);
+  assert.equal(parseCart(JSON.stringify([{ product: single, boxes: 21 }]))[0].boxes, 20);
+  const packed = { ...single, bucati_per_cutie: 6 };
+  assert.equal(maxCartBoxes(packed), 20);
+  const lines = parseCart(JSON.stringify([{ product: packed, boxes: 21 }]));
+  assert.equal(lines[0].boxes, 20);
+  assert.equal(lineTotals(lines[0]).quantity, 120);
+  assert.equal(maxCartBoxes({ ...packed, stoc_actual: 1 }), 1);
+  for (const stock of [0, -1, null, undefined, Infinity, 1.5]) {
+    const unavailable = { ...packed, stoc_actual: stock };
+    assert.equal(maxCartBoxes(unavailable), 0);
+    assert.deepEqual(parseCart(JSON.stringify([{ product: unavailable, boxes: 1 }])), []);
+  }
+});
 test("10 products / 500 boxes, quantities and money in integer bani", () => {
   const lines = Array.from({ length: 10 }, (_, i) => ({
     product: { ...product, id: i + 1 },

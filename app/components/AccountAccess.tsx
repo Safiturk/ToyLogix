@@ -8,8 +8,10 @@ import { authPost, passwordLogin } from "@/lib/auth-client";
 import { accountDestination, isRecoveryLink } from "@/lib/security-rules";
 import { accountColumns, signOutAccount, type Account } from "@/lib/account";
 import { hasPasswordComplexity } from "@/lib/auth-validation";
+import { loginErrorCode, loginMessages } from "@/lib/login-errors";
 import s from "./account-access.module.css";
 import BrandLogo from "./BrandLogo";
+import LoginStationery from "./LoginStationery";
 
 type Mode = "login" | "forgot" | "update";
 
@@ -183,8 +185,13 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
       const { data: auth, error } = await passwordLogin(email.trim(), password);
       if (error || !auth.user) {
         setError(
-          "Email sau parolă incorectă. Verifică și confirmarea adresei de email.",
+          error ? loginMessages[loginErrorCode(error)] : loginMessages.unavailable,
         );
+        return;
+      }
+      if (!auth.user.email_confirmed_at) {
+        await signOutAccount();
+        setError(loginMessages.email_not_confirmed);
         return;
       }
       // B2B approval remains a separate requirement from password authentication.
@@ -198,14 +205,17 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
       if (
         profileError ||
         !profile ||
-        !["approved", "pending"].includes(profile.status)
+        profile.status !== "approved" ||
+        profile.is_active === false
       ) {
         await supabase.auth.signOut({ scope: "local" });
         localStorage.removeItem("user_session");
         localStorage.removeItem("admin_authenticated");
         setError(
-          profile?.status === "pending"
-            ? "Contul este în curs de verificare. Vei putea intra după aprobare."
+          profileError
+            ? loginMessages.unavailable
+            : profile?.status === "pending" && profile.is_active !== false
+            ? loginMessages.approval_pending
             : "Accesul la cont nu este disponibil. Contactează echipa ToyLogix.",
         );
         return;
@@ -213,7 +223,6 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
       localStorage.setItem("user_session", JSON.stringify(profile));
       localStorage.removeItem("admin_authenticated");
       window.dispatchEvent(new Event("toylogix-session"));
-      // Pending partners can complete their own billing details, but not enter the catalog.
       let adminVerified = false;
       if (profile.rol === "admin") {
         const { data, error } = await supabase.rpc("toylogix_is_admin");
@@ -246,6 +255,11 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
       </header>
       <div className={s.layout}>
         <section className={s.story}>
+          {mode === "login" && <LoginStationery />}
+          <div className={s.storyAccent} aria-hidden="true">
+            <span />
+            <span />
+          </div>
           <span className={s.eyebrow}>UN PARTENERIAT. NOI POSIBILITĂȚI.</span>
           <h1>
             Mai multă joacă.
@@ -256,13 +270,6 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
             Catalogul, prețurile en-gros și disponibilitatea produselor —
             într-un singur loc, pentru afacerea ta.
           </p>
-          <div className={s.storyDetails}>
-            <span>01 / Descoperă colecțiile</span>
-            <span>02 / Pregătește următorul sezon</span>
-          </div>
-          <div className={s.wordmark} aria-hidden="true">
-            T<span>·</span>
-          </div>
         </section>
         <section className={s.card} aria-labelledby="access-title">
           <div className={s.cardTop}>

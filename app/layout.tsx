@@ -30,7 +30,7 @@ export default async function RootLayout({
 }) {
   await connection();
   return (
-    <html lang="ro">
+    <html lang="ro" data-scroll-behavior="smooth">
       <body>
         <LivePresence>{children}</LivePresence>
       </body>

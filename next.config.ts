@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [new URL("/storage/v1/object/public/product-images/**", process.env.NEXT_PUBLIC_SUPABASE_URL!)],
   },
   poweredByHeader: false,
+  outputFileTracingIncludes: { "/api/orders{,/pdf,/notifications}": ["./public/fonts/NotoSans.ttf"] },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders(process.env.NODE_ENV === "production") }];
   },

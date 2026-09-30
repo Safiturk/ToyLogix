@@ -75,7 +75,7 @@ export function productPageQuery(
     [filters.minPrice, "gte"],
     [filters.maxPrice, "lte"],
   ] as const) {
-    if (value?.trim() && Number.isFinite(Number(value)))
+    if (value?.trim() && Number.isFinite(Number(value)) && Number(value) >= 0)
       query = query[operator]("pret_engros", Number(value));
   }
   if (filters.sort === "price-up" || filters.sort === "price-down") {

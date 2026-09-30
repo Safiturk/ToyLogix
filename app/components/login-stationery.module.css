@@ -1,0 +1,41 @@
+.texture {
+  /* Tune or remove the login-only texture here. */
+  --stationery-color: color-mix(in srgb, #6046d3 65%, white);
+  --stationery-opacity: 0.15;
+  position: absolute;
+  inset: -64px -20px;
+  z-index: -1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.texture svg {
+  position: absolute;
+  stroke: var(--stationery-color);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: var(--stationery-opacity);
+  filter: blur(0.35px);
+  animation: drift 18s ease-in-out infinite alternate;
+}
+
+.texture .clip { width: 61px; left: 7%; top: 1%; rotate: -24deg; }
+.texture .pencil { width: 68px; right: 5%; top: 8%; rotate: 28deg; animation-delay: -7s; }
+.texture .ruler { width: 110px; left: 12%; bottom: 0; rotate: -17deg; animation-delay: -11s; }
+.texture .notebook { width: 88px; right: 2%; bottom: 4%; rotate: 15deg; animation-delay: -4s; }
+.texture .smallClip { width: 39px; right: 1%; top: 46%; rotate: 39deg; opacity: 0.1; filter: blur(0.7px); animation-delay: -13s; }
+.texture .smallPencil { width: 43px; left: -3%; top: 49%; rotate: -32deg; opacity: 0.1; filter: blur(0.7px); animation-delay: -9s; }
+
+@keyframes drift {
+  from { transform: translateY(-4px); }
+  to { transform: translateY(4px); }
+}
+
+@media (max-width: 800px) {
+  .texture { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .texture svg { animation: none; }
+}

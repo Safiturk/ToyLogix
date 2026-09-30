@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/library";
+import { startBarcodeCamera } from "@/lib/barcode-camera";
 
 interface BarcodeScannerProps {
   onScanSuccess: (code: string) => void;
@@ -15,43 +16,22 @@ export default function BarcodeScanner({
   const videoRef = useRef<HTMLVideoElement>(null);
   const stopRef = useRef<() => void>(() => undefined);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const handleSuccess = useEffectEvent(onScanSuccess);
 
   useEffect(() => {
-    let mounted = true;
+    const video = videoRef.current;
+    if (!video) return;
     const codeReader = new BrowserMultiFormatReader();
-    const stopCamera = () => {
-      codeReader.reset();
-      const stream = videoRef.current?.srcObject as MediaStream | null;
-      stream?.getTracks().forEach((track) => track.stop());
-      if (videoRef.current) videoRef.current.srcObject = null;
-    };
+    const stopCamera = startBarcodeCamera(video, codeReader, handleSuccess, () => {
+      setErrorMsg("Kamera görüntüsü okunamadı. Lütfen kamera izinlerini kontrol edip tekrar deneyin.");
+    });
     stopRef.current = stopCamera;
 
-    if (videoRef.current) {
-      const scanPromise = codeReader
-        .decodeFromVideoDevice(null, videoRef.current, (result) => {
-          if (result) {
-            const code = result.getText();
-            stopCamera();
-            onScanSuccess(code);
-          }
-        })
-        .catch(() => {
-          setErrorMsg(
-            "Kamera başlatılamadı. Lütfen kamera izinlerini kontrol edin.",
-          );
-        });
-      scanPromise.then(() => {
-        if (!mounted) stopCamera();
-      });
-    }
-
     return () => {
-      mounted = false;
       stopCamera();
       stopRef.current = () => undefined;
     };
-  }, [onScanSuccess]);
+  }, []);
 
   const closeScanner = () => {
     stopRef.current();
@@ -81,7 +61,7 @@ export default function BarcodeScanner({
           </div>
         ) : (
           <div className="relative rounded-2xl overflow-hidden bg-black border-2 border-[#729FAD] h-64 flex items-center justify-center shadow-inner">
-            <video ref={videoRef} className="w-full h-full object-cover" />
+            <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
             <div className="absolute inset-x-4 h-0.5 bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,1)]" />
           </div>
         )}

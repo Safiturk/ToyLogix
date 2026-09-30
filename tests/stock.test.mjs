@@ -9,6 +9,17 @@ import {
   stockError,
 } from "../lib/stock-rules.ts";
 
+test("product saves reject negative, nonfinite and invalid pack/threshold values", () => {
+  for (const field of ["pret_retail", "pret_engros", "bucati_per_cutie", "stoc_critic"]) {
+    for (const value of [-1, NaN, Infinity, -Infinity, "10", null])
+      assert.throws(() => productMetadata({ [field]: value }));
+  }
+  for (const field of ["bucati_per_cutie", "stoc_critic"])
+    for (const value of [1.5, 2147483648]) assert.throws(() => productMetadata({ [field]: value }));
+  assert.throws(() => productMetadata({ bucati_per_cutie: 0 }));
+  assert.doesNotThrow(() => productMetadata({ pret_retail: 0, pret_engros: 0, bucati_per_cutie: 1, stoc_critic: 0 }));
+});
+
 test("movement directions and integer/reason validation", () => {
   for (const type of ["stock_in", "return", "count_adjustment"])
     assert.equal(movementQuantity(type, 3, "Delivery"), 3);

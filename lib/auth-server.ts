@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createHmac } from "node:crypto";
 import { authJson, createAuthHandler, type AuthBackend } from "./auth-handler";
 import { accountDestination, type AuthAction } from "./security-rules";
+import { loginErrorCode } from "./login-errors";
 
 function configuration() {
   const env = serverEnv(true);
@@ -40,14 +41,26 @@ export async function handlePasswordAuth(action: AuthAction, request: Request) {
           email,
           password,
         });
-        if (error || !data.session || !data.user?.email_confirmed_at)
-          return { error: "invalid_credentials" };
+        if (error) return { error: loginErrorCode(error) };
+        if (!data.session || !data.user) return { error: "unavailable" };
+        if (!data.user.email_confirmed_at) {
+          await client.auth.signOut({ scope: "local" });
+          return { error: "email_not_confirmed" };
+        }
         const { data: profile, error: denied } = await client
           .from("utilizatori")
           .select("rol,status,is_active")
           .eq("auth_user_id", data.user.id)
           .maybeSingle();
-        if (denied || accountDestination(profile) === "/login") {
+        if (denied) {
+          await client.auth.signOut({ scope: "local" });
+          return { error: "unavailable" };
+        }
+        if (profile?.status === "pending" && profile.is_active !== false) {
+          await client.auth.signOut({ scope: "local" });
+          return { error: "approval_pending" };
+        }
+        if (accountDestination(profile) === "/login") {
           await client.auth.signOut({ scope: "local" });
           return {
             session: { access_token: "", refresh_token: "" },

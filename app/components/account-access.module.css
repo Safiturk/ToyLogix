@@ -9,14 +9,15 @@
 .logo small { display: inline-block; font-size: 9px; letter-spacing: 1.6px; font-weight: 500; margin-left: 18px; color: #81798f; }
 .header > span { color: #81798f; font-size: 11px; }
 .layout { width: 100%; max-width: 1160px; margin: auto; padding: 64px 0; display: grid; grid-template-columns: 1fr minmax(0, 450px); gap: 9%; align-items: center; }
-.story { position: relative; padding-bottom: 110px; }
+.story { position: relative; isolation: isolate; padding: 32px 0; }
+.storyAccent { position: relative; width: 64px; height: 58px; margin-bottom: 32px; }
+.storyAccent span { position: absolute; width: 40px; height: 40px; border-radius: 12px; }
+.storyAccent span:first-child { top: 0; left: 0; background: #6546c8; }
+.storyAccent span:last-child { right: 0; bottom: 0; background: #c7b6e5; border: 3px solid #f9f8fc; }
 .eyebrow { color: #7b6a95; font-size: 9px; font-weight: 650; letter-spacing: 1.7px; }
 .story h1 { font-size: clamp(32px, 3.3vw, 49px); line-height: 1.18; letter-spacing: -1.9px; margin: 24px 0; font-weight: 600; }
 .story h1 em { color: var(--purple); font-weight: 400; font-family: Georgia, serif; }
-.story > p { color: #777083; font-size: 14px; line-height: 1.9; max-width: 365px; }
-.storyDetails { display: grid; gap: 12px; margin-top: 32px; font-size: 11px; color: #8f879c; }
-.wordmark { position: absolute; bottom: -26px; font-size: 100px; line-height: 1; font-weight: 750; letter-spacing: -9px; color: #e7e0f2; }
-.wordmark span { color: #c7b6e5; }
+.story > p { color: #777083; font-size: 14px; line-height: 1.9; max-width: 365px; margin: 0; }
 .card { padding: 34px; background: #fff; border: 1px solid #e7e2ed; border-radius: 22px; box-shadow: 0 2px 5px #24213b03, 0 20px 60px -20px #41305a24, 0 1px 0 #fff inset; }
 .cardTop { display: flex; align-items: center; justify-content: space-between; color: #a39aad; }
 .card h2 { font-size: 29px; font-weight: 600; letter-spacing: -1px; margin: 25px 0 12px; }

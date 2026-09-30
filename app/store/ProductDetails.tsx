@@ -7,7 +7,7 @@ import {
   productImages,
   formatPrice,
 } from "@/lib/catalog";
-import { AddToCart } from "./CartControls";
+import { AddToCart, CartMenu } from "./CartControls";
 import ProductPicture from "./ProductPicture";
 import s from "../customer.module.css";
 import { useWishlistMotion } from "./useWishlistMotion";
@@ -82,6 +82,7 @@ export default function ProductDetails({
           <span className={s.eyebrow}>
             {product.categorie || "Catalog ToyLogix"}
           </span>
+          <CartMenu />
           <button
             className={s.iconButton}
             onClick={close}
@@ -170,7 +171,7 @@ export default function ProductDetails({
               }
             >
               {Number(product.stoc_actual) > 0
-                ? `În stoc · ${product.stoc_actual} buc.`
+                ? `În stoc · ${product.stoc_actual} cutii`
                 : "Stoc epuizat"}
             </span>
             <div className={s.pricePanel}>

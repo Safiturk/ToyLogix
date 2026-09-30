@@ -105,6 +105,7 @@ export default function AccountPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <nav className="flex flex-wrap items-center justify-between gap-4 text-sm">
           <Link href="/store">← ToyLogix / Catalog</Link>
+          {profile?.status === "approved" && <Link href="/store/orders">Comenzile mele</Link>}
           <div className="flex items-center gap-5">
             {profile?.rol === "admin" && profile.status === "approved" && (
               <>

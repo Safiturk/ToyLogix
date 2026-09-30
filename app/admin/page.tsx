@@ -16,17 +16,20 @@ import {
   loadInventorySummary,
   type InventorySummary,
   type InventoryStats,
-  loadInventoryStats,
-  INVENTORY_SUMMARY_COLUMNS,
+  loadInventoryDashboard,
 } from "@/lib/inventory-query";
 import { DETAIL_COLUMNS, hasArchiveColumn, loadFacet } from "@/lib/catalog-query";
 import { uploadProductImage, isProductImageUrl } from "@/lib/product-storage";
 import ProductInventory from "./ProductInventory";
 import StockManagement from "./StockManagement";
 import AuditHistory from "./AuditHistory";
+import OrderOverview from "./OrderOverview";
+import OrderNotifications from "@/app/components/OrderNotifications";
 import { authPost } from "@/lib/auth-client";
 import { archiveProduct as setProductArchived, recordStockMovement } from "@/lib/stock";
 import { productMetadata, stockError } from "@/lib/stock-rules";
+import NumericInput from "@/app/components/NumericInput";
+import { downloadInventoryReport } from "@/lib/inventory-download";
 import {
   type InventoryProduct,
   type AdminAccount,
@@ -50,7 +53,9 @@ function SimplePagination({ page, count, size, change, label }: { page: number; 
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState<InventoryStats>({ products: 0, stock: 0, retail: 0, wholesale: 0, critical: 0 });
+  const [stats, setStats] = useState<InventoryStats | null>(null);
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [facetError, setFacetError] = useState("");
   const [criticalStockProducts, setCriticalProducts] = useState<InventorySummary[]>([]);
   const [criticalPage, setCriticalPage] = useState(1);
   const [facets, setFacets] = useState({ categorie: [] as string[], brand: [] as string[], material: [] as string[], varsta_recomandata: [] as string[] });
@@ -70,6 +75,8 @@ export default function AdminDashboard() {
   const [savingProduct, setSavingProduct] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [originalStock, setOriginalStock] = useState<number | null>(null);
+  const [originalImages, setOriginalImages] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState<AdminAccount | null>(null);
   const [detailUser, setDetailUser] = useState<AdminAccount | null>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -109,24 +116,34 @@ export default function AdminDashboard() {
     if (!currentUser) return;
     const controller = new AbortController();
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
-    void Promise.all([
-      loadInventoryStats(supabase, signal),
-      supabase.from("inventory_products").select(INVENTORY_SUMMARY_COLUMNS, { count: "exact" })
-        .eq("is_archived", false).eq("stock_is_critical", true).order("id", { ascending: false })
-        .range((criticalPage - 1) * 12, criticalPage * 12 - 1).abortSignal(signal)
-        .overrideTypes<InventorySummary[], { merge: false }>(),
-      Promise.all((["categorie", "brand", "material", "varsta_recomandata"] as const).map((field) => loadFacet(supabase, field, signal))),
-    ]).then(([totals, critical, options]) => {
+    void loadInventoryDashboard(supabase, signal, criticalPage).then((result) => {
       if (controller.signal.aborted) return;
-      if (critical.error) throw critical.error;
-      const last = Math.max(1, Math.ceil((critical.count ?? 0) / 12));
+      const last = Math.max(1, Math.ceil(result.criticalCount / 12));
       if (criticalPage > last) { setCriticalPage(last); return; }
-      setStats(totals); setCriticalProducts(critical.data ?? []);
-      setFacets({ categorie: options[0], brand: options[1], material: options[2], varsta_recomandata: options[3] });
+      setStats(result.stats); setCriticalProducts(result.critical);
       setProductLoadError("");
-    }).catch(() => { if (!controller.signal.aborted) setProductLoadError("Inventarul nu poate fi încărcat."); });
+    }).catch(() => {
+      if (!controller.signal.aborted) {
+        setStats(null);
+        setCriticalProducts([]);
+        setProductLoadError("Inventarul nu poate fi încărcat.");
+      }
+    }).finally(() => { if (!controller.signal.aborted) setInventoryLoading(false); });
     return () => controller.abort();
   }, [currentUser, inventoryVersion, criticalPage]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const controller = new AbortController();
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
+    void Promise.all((["categorie", "brand", "material", "varsta_recomandata"] as const)
+      .map((field) => loadFacet(supabase, field, signal))).then((options) => {
+      if (controller.signal.aborted) return;
+      setFacets({ categorie: options[0], brand: options[1], material: options[2], varsta_recomandata: options[3] });
+      setFacetError("");
+    }).catch(() => { if (!controller.signal.aborted) setFacetError("Sugestiile pentru produse nu pot fi încărcate."); });
+    return () => controller.abort();
+  }, [currentUser, inventoryVersion]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -146,7 +163,15 @@ export default function AdminDashboard() {
     return () => controller.abort();
   }, [currentUser, accountVersion, accountPage, pendingPage]);
 
-  const refreshProducts = async () => { setInventoryVersion((value) => value + 1); };
+  const refreshProducts = async () => {
+    setInventoryLoading(true);
+    setProductLoadError("");
+    setInventoryVersion((value) => value + 1);
+  };
+  const changeCriticalPage = (page: number) => {
+    setInventoryLoading(true);
+    setCriticalPage(page);
+  };
   const refreshAccounts = async () => { setAccountVersion((value) => value + 1); setAuditVersion((value) => value + 1); };
 
   const updateAccountStatus = async (
@@ -287,6 +312,8 @@ export default function AdminDashboard() {
         return;
       }
       setEditingId(data.id || null);
+      setOriginalStock(data.stoc_actual);
+      setOriginalImages([...(data.imagini || [])]);
       setForm({
         ...data,
         imagini: data.imagini || [],
@@ -300,6 +327,8 @@ export default function AdminDashboard() {
 
   const cancelEdit = () => {
     setEditingId(null);
+    setOriginalStock(null);
+    setOriginalImages([]);
     setForm(createProductDraft());
     setIsCustomCategory(false);
   };
@@ -323,16 +352,29 @@ export default function AdminDashboard() {
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (savingProduct || uploadingImages) return;
-    if (!editingId && (!Number.isSafeInteger(form.stoc_actual) || form.stoc_actual < 0 || form.stoc_actual > 2147483647)) {
+    if (!Number.isSafeInteger(form.stoc_actual) || form.stoc_actual < 0 || form.stoc_actual > 2147483647) {
       alert("Stocul trebuie să fie un număr întreg între 0 și 2147483647.");
       return;
     }
-    if (form.imagini?.some((image) => !isProductImageUrl(image))) { alert("Încărcați imaginile în Storage înainte de salvare."); return; }
+    // Existing products can still contain legacy image URLs or embedded images.
+    // Only newly added images must satisfy the current Storage upload policy.
+    if (form.imagini?.some((image) =>
+      !(editingId && originalImages.includes(image)) && !isProductImageUrl(image)
+    )) { alert("Încărcați imaginile noi în Storage înainte de salvare."); return; }
     setSavingProduct(true);
-    const metadata = productMetadata({ ...form });
     try {
+      const metadata = productMetadata({ ...form });
+      if (editingId && (form.imagini ?? []).length === originalImages.length &&
+        (form.imagini ?? []).every((image, index) => image === originalImages[index])) {
+        delete metadata.imagini;
+      }
       const { data, error } = editingId
-        ? await supabase.from("produse").update(metadata).eq("id", editingId).select("id").single()
+        ? await supabase.rpc("update_product_with_stock", {
+            p_product_id: editingId,
+            p_metadata: metadata,
+            p_stock: form.stoc_actual === originalStock ? null : form.stoc_actual,
+            p_expected_stock: originalStock,
+          })
         : await supabase.from("produse").insert([metadata]).select("id").single();
       if (error) throw error;
       if (!editingId && form.stoc_actual > 0) {
@@ -367,23 +409,14 @@ export default function AdminDashboard() {
   };
 
   const exportToExcel = async () => {
-    if (exporting || stats.products === 0) return;
+    if (exporting || !currentUser) return;
     setExporting(true);
     try {
-      const { createInventoryReport } = await import("@/lib/inventory-report");
-      const products = await loadInventorySummary(supabase, AbortSignal.timeout(60000));
-      const buffer = await createInventoryReport(products);
-      const blob = new Blob([Uint8Array.from(new Uint8Array(buffer))], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      await downloadInventoryReport(async () => {
+        const { createInventoryReport } = await import("@/lib/inventory-report");
+        const products = await loadInventorySummary(supabase, AbortSignal.timeout(60000));
+        return createInventoryReport(products);
       });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "Inventar_ToyLogix.xlsx";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch {
       alert("Raportul Excel nu a putut fi creat. Încercați din nou.");
     } finally {
@@ -394,9 +427,7 @@ export default function AdminDashboard() {
   const allCategoryOptions = Array.from(new Set([...DEFAULT_CATEGORIES, ...facets.categorie]));
   const existingBrandOptions = facets.brand;
   const registeredUsers = accounts;
-  const totalStockItems = stats.stock;
-  const totalRetailValue = stats.retail;
-  const totalEngrosValue = stats.wholesale;
+  const statsPlaceholder = inventoryLoading ? "Se încarcă…" : "Indisponibil";
   const formatRON = (amount: number) => {
     return new Intl.NumberFormat("ro-RO", {
       minimumFractionDigits: 0,
@@ -420,9 +451,12 @@ export default function AdminDashboard() {
             </Link>
 
             <div className={dashboard.actions}>
+              <Link href="/admin/orders" className={dashboard.action}>Comenzi B2B</Link>
+              <OrderNotifications admin enabled={Boolean(currentUser)} />
               <button
+                type="button"
                 onClick={exportToExcel}
-                disabled={exporting || stats.products === 0}
+                disabled={exporting || !currentUser}
                 className={dashboard.action}
               >
                 {exporting ? "Se pregătește…" : "📊 Raport Excel"}
@@ -445,13 +479,15 @@ export default function AdminDashboard() {
             </div>
           </header>
 
-          <section className={dashboard.stats}>
+          <OrderOverview enabled={Boolean(currentUser)} />
+
+          <section className={dashboard.stats} aria-busy={inventoryLoading}>
             <div className={dashboard.stat}>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Produse
               </span>
               <div className="text-2xl font-black text-slate-900">
-                {stats.products} tipuri
+                {stats && !inventoryLoading ? `${stats.products} tipuri` : statsPlaceholder}
               </div>
             </div>
 
@@ -460,7 +496,7 @@ export default function AdminDashboard() {
                 Bucăți în Stoc
               </span>
               <div className="text-2xl font-black text-indigo-600">
-                {formatRON(totalStockItems)} buc
+                {stats && !inventoryLoading ? `${formatRON(stats.stock)} buc` : statsPlaceholder}
               </div>
             </div>
 
@@ -469,10 +505,10 @@ export default function AdminDashboard() {
                 Valoare Inventar (B2B)
               </span>
               <div className="text-2xl font-black text-emerald-600">
-                {formatRON(totalEngrosValue)} RON
+                {stats && !inventoryLoading ? `${formatRON(stats.wholesale)} RON` : statsPlaceholder}
               </div>
               <span className="text-[10px] text-slate-400 block font-medium">
-                Valoare RRP: {formatRON(totalRetailValue)} RON
+                Valoare RRP: {stats && !inventoryLoading ? `${formatRON(stats.retail)} RON` : statsPlaceholder}
               </span>
             </div>
 
@@ -483,7 +519,7 @@ export default function AdminDashboard() {
               <div
                 className={`text-2xl font-black ${criticalStockProducts.length > 0 ? "text-rose-600" : "text-slate-900"}`}
               >
-                {stats.critical} produse
+                {stats && !inventoryLoading ? `${stats.critical} produse` : statsPlaceholder}
               </div>
               <a
                 href="#critical-stock"
@@ -502,7 +538,7 @@ export default function AdminDashboard() {
           )}
           <section id="critical-stock" className={dashboard.section}>
             <h2 className="text-xl font-bold">Produse cu stoc critic</h2>
-            {criticalStockProducts.length ? (
+            {inventoryLoading ? <p role="status">Se încarcă…</p> : productLoadError ? <p>Stocul critic nu poate fi afișat.</p> : criticalStockProducts.length ? (
               <ul className="mt-3 space-y-2">
                 {criticalStockProducts.map((product) => (
                   <li key={product.id}>
@@ -510,7 +546,7 @@ export default function AdminDashboard() {
                       className="text-indigo-700 underline"
                       onClick={() => product.id && showStockHistory(product.id)}
                     >
-                      {product.nume_produs} — {product.stoc_actual} buc (prag:{" "}
+                      {product.nume_produs} — {product.stoc_actual} cutii (prag:{" "}
                       {product.critical_stock_level ?? product.stoc_critic}) ·
                       Detalii și istoric
                     </button>
@@ -522,7 +558,8 @@ export default function AdminDashboard() {
             )}
           </section>
 
-          <SimplePagination page={criticalPage} count={stats.critical} size={12} change={setCriticalPage} label="Stoc critic" />
+          {stats && !inventoryLoading && <SimplePagination page={criticalPage} count={stats.critical} size={12} change={changeCriticalPage} label="Stoc critic" />}
+          {facetError && <p role="alert">{facetError} <button onClick={refreshProducts}>Reîncarcă</button></p>}
           {accountError && <p role="alert">{accountError} <button onClick={refreshAccounts}>Reîncearcă</button></p>}
           <SimplePagination page={pendingPage} count={pendingCount} size={12} change={setPendingPage} label="Solicitări" />
           <SimplePagination page={accountPage} count={accountCount} size={24} change={setAccountPage} label="Conturi" />
@@ -1043,15 +1080,16 @@ export default function AdminDashboard() {
                   <label className="block text-xs font-bold text-indigo-700 mb-1">
                     Preț En-Gros (B2B Toptan Fiyat)
                   </label>
-                  <input
+                  <NumericInput
                     type="number"
+                    min="0"
                     step="0.01"
                     required
-                    value={form.pret_engros || ""}
+                    value={form.pret_engros}
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        pret_engros: parseFloat(e.target.value) || 0,
+                        pret_engros: Number(e.target.value),
                       })
                     }
                     className="w-full p-2.5 border rounded-xl text-xs outline-none font-bold bg-indigo-50/60 border-indigo-200"
@@ -1062,15 +1100,16 @@ export default function AdminDashboard() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Preț Vânzare Recomandat (RRP)
                   </label>
-                  <input
+                  <NumericInput
                     type="number"
+                    min="0"
                     step="0.01"
                     required
-                    value={form.pret_retail || ""}
+                    value={form.pret_retail}
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        pret_retail: parseFloat(e.target.value) || 0,
+                        pret_retail: Number(e.target.value),
                       })
                     }
                     className="w-full p-2.5 border rounded-xl text-xs outline-none"
@@ -1081,13 +1120,17 @@ export default function AdminDashboard() {
                   <label className="block text-xs font-bold mb-1">
                     Bucăți / Cutie
                   </label>
-                  <input
+                  <NumericInput
                     type="number"
+                    min="1"
+                    max="2147483647"
+                    step="1"
+                    required
                     value={form.bucati_per_cutie || ""}
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        bucati_per_cutie: parseInt(e.target.value) || 1,
+                        bucati_per_cutie: Number(e.target.value),
                       })
                     }
                     className="w-full p-2.5 border rounded-xl text-xs outline-none"
@@ -1097,9 +1140,10 @@ export default function AdminDashboard() {
                   <label className="block text-xs font-bold mb-1">
                     Prag stoc critic
                   </label>
-                  <input
+                  <NumericInput
                     type="number"
                     min="0"
+                    max="2147483647"
                     step="1"
                     required
                     value={form.stoc_critic}
@@ -1117,31 +1161,25 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label htmlFor="product-stock" className="block text-xs font-bold mb-1">
-                    {editingId ? "Stoc actual (bucăți)" : "Stoc inițial (bucăți)"}
+                    {editingId ? "Stoc actual (cutii)" : "Stoc inițial (cutii)"}
                   </label>
-                  <input
+                  <NumericInput
                     id="product-stock"
                     type="number"
                     min="0"
                     max="2147483647"
                     step="1"
                     required
-                    readOnly={!!editingId}
                     disabled={savingProduct}
                     value={form.stoc_actual}
                     onChange={(e) => setForm({ ...form, stoc_actual: Number(e.target.value) })}
-                    aria-describedby="product-stock-help"
+                    aria-describedby={editingId ? undefined : "product-stock-help"}
                     className="w-full p-2.5 border rounded-xl text-xs outline-none"
                   />
-                  <p id="product-stock-help" className="mt-2 text-xs text-slate-500">
-                    {editingId
-                      ? "Pentru modificări, folosește „Stoc și istoric mișcări”."
-                      : "Cantitatea disponibilă se înregistrează ca intrare la salvare."}
-                  </p>
-                  {editingId && (
-                    <button type="button" onClick={() => showStockHistory(editingId)} className="mt-2 text-xs font-bold text-violet-700 underline">
-                      Modifică stocul
-                    </button>
+                  {!editingId && (
+                    <p id="product-stock-help" className="mt-2 text-xs text-slate-500">
+                      Cantitatea disponibilă se înregistrează ca intrare la salvare.
+                    </p>
                   )}
                 </div>
               </div>
@@ -1173,6 +1211,7 @@ export default function AdminDashboard() {
           />
           <AuditHistory refreshVersion={auditVersion} />
           <StockManagement
+            refreshVersion={inventoryVersion}
             key={stockProductId ?? "all"}
             selectedId={stockProductId}
             selectProduct={setStockProductId}

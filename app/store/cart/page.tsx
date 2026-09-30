@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { authPost } from "@/lib/auth-client";
 import BrandLogo from "@/app/components/BrandLogo";
+import NumericInput from "@/app/components/NumericInput";
 import { currentAccount, billingFields, type Billing } from "@/lib/account";
 import { supabase } from "@/lib/supabase";
 import { CARD_COLUMNS, hasArchiveColumn } from "@/lib/catalog-query";
@@ -9,10 +12,8 @@ import type { ProductCard } from "@/lib/catalog";
 import {
   cartTotals,
   companyDetails,
-  emailMessage,
   lineTotals,
-  mailtoLink,
-  MAX_BOXES,
+  maxCartBoxes,
   money,
   parseCart,
   requestNotice,
@@ -24,10 +25,8 @@ import s from "../cart.module.css";
 
 type Prepared = {
   key: string;
-  file: File;
   company: string[][];
   missing: boolean;
-  download: (file: File) => void;
 };
 export default function CartPage() {
   const cart = useCart();
@@ -35,9 +34,9 @@ export default function CartPage() {
   const [prepared, setPrepared] = useState<Prepared | null>(null);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
-  const [recipient, setRecipient] = useState("");
+  const router = useRouter();
   const [revision, setRevision] = useState(0);
-  const [sharing, setSharing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const raw = cart.raw;
   const key = `${user?.id}:${raw}:${revision}`;
   const ready = prepared?.key === key ? prepared : null;
@@ -97,7 +96,7 @@ export default function CartPage() {
             throw new Error(
               `Produs indisponibil sau incomplet: ${line.product.nume_produs}. Elimină-l din coș pentru a continua.`,
             );
-          return { ...line, product };
+          return { ...line, product, boxes: Math.min(line.boxes, maxCartBoxes(product)) };
         });
         if (!active) return;
         if (
@@ -106,40 +105,27 @@ export default function CartPage() {
               l.product.pret_engros !== lines[i].product.pret_engros ||
               l.product.bucati_per_cutie !==
                 lines[i].product.bucati_per_cutie ||
-              l.product.nume_produs !== lines[i].product.nume_produs,
+              l.product.nume_produs !== lines[i].product.nume_produs ||
+              l.boxes !== lines[i].boxes ||
+              l.product.stoc_actual !== lines[i].product.stoc_actual,
           )
         ) {
           // Do not overwrite changes made in another tab while the request was running.
           const storageKey = `toylogix-cart-v1:${account.id}`;
           if (localStorage.getItem(storageKey) === raw) {
-            localStorage.setItem(storageKey, JSON.stringify(fresh));
+            localStorage.setItem(storageKey, JSON.stringify(fresh.filter((line) => line.boxes > 0)));
             window.dispatchEvent(new Event("toylogix-cart"));
             setStatus(
-              "Coșul a fost actualizat cu prețurile și ambalajele curente. Verifică totalurile.",
+              "Coșul a fost actualizat cu stocul, prețurile și ambalajele curente. Cantitățile sunt limitate la stocul disponibil. Verifică totalurile.",
             );
           }
           return;
         }
         const company = companyDetails(account, (billing || {}) as Billing);
-        const pdf = await import("@/lib/order-pdf");
-        const assets = await pdf.loadPdfAssets();
-        const file = pdf.createOrderPdf(
-          {
-            company,
-            lines: fresh,
-            barcodes: Object.fromEntries(
-              fresh.map((l) => [l.product.id, l.product.cod_bara]),
-            ),
-            date: new Date(),
-          },
-          assets,
-        );
         if (active) {
           setPrepared({
             key,
             company,
-            file,
-            download: pdf.downloadPdf,
             missing: company.some(([, value]) => value === "Nespecificat"),
           });
           setError("");
@@ -150,7 +136,7 @@ export default function CartPage() {
           setError(
             failure instanceof Error
               ? failure.message
-              : "PDF-ul nu poate fi pregătit. Încearcă din nou.",
+              : "Cererea nu poate fi pregătită. Încearcă din nou.",
           );
         }
       }
@@ -161,53 +147,28 @@ export default function CartPage() {
     };
   }, [raw, user?.id, key]);
   const total = cartTotals(cart.lines);
-  const message = emailMessage(
-    ready?.company[0][1] || "Nespecificat",
-    cart.lines,
-  );
-  function email(event: React.FormEvent) {
-    event.preventDefault();
-    if (!ready) return;
-    ready.download(ready.file);
-    setStatus(
-      "PDF-ul a fost descărcat. Atașează-l manual la e-mail înainte de trimitere. Dacă aplicația de e-mail nu se deschide, folosește linkul de mai jos.",
-    );
-    window.location.href = mailtoLink(recipient, message);
-  }
-  async function share() {
-    if (!ready) return;
-    ready.download(ready.file);
-    if (!navigator.canShare?.({ files: [ready.file] }) || !navigator.share) {
-      setStatus(
-        "Partajarea fișierelor nu este disponibilă. PDF-ul a fost descărcat; folosește trimiterea prin e-mail și atașează-l manual.",
-      );
-      return;
-    }
-    setSharing(true);
+  async function submit() {
+    if (!ready || submitting || !user) return;
+    setSubmitting(true); setError("");
     try {
-      await navigator.share({
-        files: [ready.file],
-        title: message.subject,
-        text: message.body,
-      });
-      setStatus(
-        "PDF-ul a fost partajat. Verifică destinatarul și atașamentul în aplicația aleasă.",
-      );
+      const storageKey = `toylogix-request:${user.id}`;
+      const payload = JSON.stringify(cart.lines.map(l => ({product_id:l.product.id,boxes:l.boxes,price:l.product.pret_engros,pack:l.product.bucati_per_cutie})));
+      let attempt = JSON.parse(localStorage.getItem(storageKey) || "null");
+      if (!attempt || attempt.payload !== payload) { attempt = {key:crypto.randomUUID(),payload}; localStorage.setItem(storageKey,JSON.stringify(attempt)); }
+      const result = await authPost("/api/orders",{key:attempt.key,lines:JSON.parse(payload)},true);
+      cart.update(() => []);
+      localStorage.removeItem(storageKey);
+      router.push(`/store/orders?order=${result.order.id}${result.notificationPending ? "&notifications=pending" : ""}`);
     } catch (failure) {
-      setStatus(
-        failure instanceof DOMException && failure.name === "AbortError"
-          ? "Partajare anulată. PDF-ul rămâne descărcat."
-          : "Partajarea nu a reușit. PDF-ul a fost descărcat; atașează-l manual la e-mail.",
-      );
-    } finally {
-      setSharing(false);
-    }
+      setError(failure instanceof Error ? failure.message : "Cererea nu a fost confirmată.");
+    } finally { setSubmitting(false); }
   }
   return (
     <main className={s.page}>
       <div className={s.container}>
         <div className={s.heading}>
           <BrandLogo className={s.logo} />
+          <Link href="/store/orders">Comenzile mele</Link>
           <Link href="/store">← Continuă cumpărăturile</Link>
         </div>
         <div className={s.heading}>
@@ -259,24 +220,23 @@ export default function CartPage() {
                   </div>
                   <label>
                     Număr de cutii
-                    <input
+                    <NumericInput
                       aria-label={`Cutii: ${line.product.nume_produs}`}
                       type="number"
                       min="1"
-                      max={MAX_BOXES}
+                      max={maxCartBoxes(line.product)}
                       step="1"
                       value={line.boxes}
                       onChange={(e) => {
                         const boxes = Number(e.target.value);
                         if (
                           Number.isInteger(boxes) &&
-                          boxes > 0 &&
-                          boxes <= MAX_BOXES
+                          boxes > 0
                         )
                           cart.update((rows) =>
                             rows.map((l) =>
                               l.product.id === line.product.id
-                                ? { ...l, boxes }
+                                ? { ...l, boxes: Math.min(boxes, maxCartBoxes(l.product)) }
                                 : l,
                             ),
                           );
@@ -327,7 +287,7 @@ export default function CartPage() {
               ) : (
                 <p role="status">
                   {error ||
-                    "Se verifică produsele și se pregătește PDF-ul cu datele contului…"}
+                    "Se verifică produsele și datele contului…"}
                 </p>
               )}
               {error && (
@@ -341,59 +301,14 @@ export default function CartPage() {
                   Încearcă din nou
                 </button>
               )}
+              {error && <p role="alert" className={s.notice}>{error}</p>}
               <div className={s.actions}>
-                <button
-                  className={s.primary}
-                  disabled={!ready}
-                  onClick={() => {
-                    if (ready) {
-                      ready.download(ready.file);
-                      setStatus("PDF-ul cererii a fost descărcat.");
-                    }
-                  }}
-                >
-                  Generează PDF-ul comenzii
+                <button className={s.primary} disabled={!ready || submitting} onClick={submit}>
+                  {submitting ? "Se trimite cererea…" : "Trimite cererea de comandă"}
                 </button>
-                <button
-                  className={s.secondary}
-                  disabled={!ready || sharing}
-                  onClick={share}
-                >
-                  {sharing ? "Se partajează…" : "Partajează PDF-ul"}
-                </button>
+                <Link href="/store/orders">Comenzile mele</Link>
               </div>
-              <form className={s.email} onSubmit={email}>
-                <label>
-                  E-mail destinatar
-                  <input
-                    type="email"
-                    required
-                    maxLength={254}
-                    autoComplete="email"
-                    placeholder="destinatar@exemplu.ro"
-                    value={recipient}
-                    onChange={(e) => setRecipient(e.target.value)}
-                  />
-                </label>
-                <button className={s.primary} disabled={!ready}>
-                  Trimite prin e-mail
-                </button>
-              </form>
-              <p className={s.notice}>
-                PDF-ul se descarcă automat. Aplicația de e-mail se deschide cu
-                destinatarul, subiectul și mesajul în română.{" "}
-                <strong>
-                  Atașează manual PDF-ul descărcat înainte de a trimite
-                  e-mailul.
-                </strong>{" "}
-                Pentru un atașament direct, încearcă „Partajează PDF-ul” pe un
-                dispozitiv compatibil.
-              </p>
-              {ready && recipient && (
-                <a href={mailtoLink(recipient, message)}>
-                  Deschide din nou mesajul în aplicația de e-mail
-                </a>
-              )}
+              <p className={s.muted}>Cererea și rezumatul PDF sunt trimise automat către tine și ToyLogix. Plata se efectuează prin transfer bancar după aprobare.</p>
             </section>
           </>
         )}

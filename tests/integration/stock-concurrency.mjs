@@ -21,6 +21,7 @@ const pg = new EmbeddedPostgres({
   user: "postgres",
   password: "local-test-only",
   persistent: false,
+  initdbFlags: ["--encoding=UTF8", "--locale=C"],
   postgresFlags: ["-h", "127.0.0.1"],
   onLog: () => {},
   onError: () => {},
@@ -50,6 +51,7 @@ try {
     "../fixtures/legacy-schema.sql",
     "../../supabase/migrations/202609190001_account_security.sql",
     "../../supabase/migrations/202609230001_stock_management.sql",
+    "../../supabase/migrations/20260928071201_product_edit_stock.sql",
   ])
     await observer.query(
       await readFile(new URL(path, import.meta.url), "utf8"),
@@ -139,13 +141,38 @@ try {
   assert.equal(await ledgerCount(), 4);
   console.log("PASS: competing reversals apply exactly once");
 
+  const edit = (client, stock, expected) => client.query(
+    "select * from public.update_product_with_stock(1,'{\"brand\":\"Concurrent edit\"}', $1, $2)",
+    [stock, expected],
+  );
+  const stockEdit = await compete(
+    () => move(a, "stock_in", 2),
+    () => edit(b, 20, 6),
+  );
+  assert.match(stockEdit.second.error?.message ?? "", /STOCK_CHANGED/);
+  assert.equal(await balance(), 8);
+  const metadataEdit = await compete(
+    () => move(a, "stock_out", -2),
+    () => edit(b, null, 8),
+  );
+  assert.ok(metadataEdit.second.value);
+  assert.equal(await balance(), 6);
+  const doubleSave = await compete(
+    () => edit(a, 10, 6),
+    () => edit(b, 10, 6),
+  );
+  assert.ok(doubleSave.second.value);
+  assert.equal(await balance(), 10);
+  assert.equal(await ledgerCount(), 7);
+  console.log("PASS: product edits serialize, preserve movements and do not duplicate retries");
+
   const archive = await compete(
     () => a.query("update public.produse set is_archived=true where id=1"),
     () => move(b, "stock_in", 1),
   );
   assert.match(archive.second.error?.message ?? "", /STOCK_PRODUCT_ARCHIVED/);
-  assert.equal(await balance(), 6);
-  assert.equal(await ledgerCount(), 4);
+  assert.equal(await balance(), 10);
+  assert.equal(await ledgerCount(), 7);
   console.log("PASS: archive and movement serialize on the same row");
 
   for (const path of [

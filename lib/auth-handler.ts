@@ -9,6 +9,7 @@ import {
   isEmailAddress,
   isRomanianPhone,
 } from "./auth-validation.ts";
+import { loginMessages } from "./login-errors.ts";
 
 type LoginResult = {
   session?: { access_token: string; refresh_token: string };
@@ -107,14 +108,22 @@ export function createAuthHandler(
         return authJson({ error: "Parola nu este validă." }, 400);
       if (action === "login") {
         const result = await backend.login(email, password);
+        if (result.error === "email_not_confirmed" || result.error === "approval_pending")
+          return authJson({ error: loginMessages[result.error] }, 403);
+        if (result.error === "rate_limited")
+          return authJson({ error: loginMessages.rate_limited }, 429);
+        if (result.error && result.error !== "invalid_credentials")
+          return authJson({ error: loginMessages.unavailable }, 503);
         if (!result.session || result.error)
           return authJson(
             {
               error:
-                "Email sau parolă incorectă. Verificați confirmarea emailului.",
+                loginMessages.invalid_credentials,
             },
             401,
           );
+        if (result.profile?.status === "pending" && result.profile.is_active !== false)
+          return authJson({ error: loginMessages.approval_pending }, 403);
         const destination = accountDestination(result.profile ?? null);
         if (destination === "/login")
           return authJson(

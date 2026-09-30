@@ -17,6 +17,9 @@ test("stock migration and PostgreSQL security/transaction regression", async (t)
     await db.exec(
       await read("../supabase/migrations/202609230001_stock_management.sql"),
     );
+    await db.exec(await read("../supabase/migrations/20260928071201_product_edit_stock.sql"));
+    await db.exec("alter table public.produse add column greutate_gramaj integer, add column volum_dm3 numeric");
+    await db.exec(await read("../supabase/migrations/20260929213650_product_numeric_limits.sql"));
     const query = async (sql, params = []) =>
       (await db.query(sql, params)).rows;
     const product = async () =>
@@ -66,6 +69,63 @@ test("stock migration and PostgreSQL security/transaction regression", async (t)
 
     await t.test("existing account security suite still passes", async () => {
       await db.exec(await read("../supabase/tests/account_security.sql"));
+    });
+    const edit = (metadata, stock = null, expected = null) => query(
+      "select * from public.update_product_with_stock(1,$1::jsonb,$2::integer,$3::integer)",
+      [JSON.stringify(metadata), stock, expected],
+    );
+    await scenario("database rejects invalid product values through direct writes and RPC", async () => {
+      for (const field of ["pret_retail", "pret_engros", "bucati_per_cutie", "stoc_critic"]) {
+        await fail(`update public.produse set ${field}=-1 where id=1`, [], /check constraint/);
+        await fail(`insert into public.produse (${field}) values (-1)`, [], /check constraint/);
+        await fail("select public.update_product_with_stock(1,$1::jsonb,null,null)", [JSON.stringify({ [field]: -1 })], /check constraint/);
+      }
+      await fail("update public.produse set bucati_per_cutie=0 where id=1", [], /check constraint/);
+      for (const field of ["pret_retail", "pret_engros"])
+        for (const value of ["NaN", "Infinity", "-Infinity"])
+          await fail(`update public.produse set ${field}=$1::numeric where id=1`, [value], /check constraint/);
+      await edit({ pret_retail: 0, pret_engros: 0, bucati_per_cutie: 1, stoc_critic: 0 });
+      assert.equal((await product()).bucati_per_cutie, 1);
+    });
+    await t.test("database rejects negative weight, volume and opening stock", async () => {
+      for (const field of ["greutate_gramaj", "volum_dm3", "opening_stock"])
+        await assert.rejects(() => db.query(`update public.produse set ${field}=-1 where id=1`), /check constraint|STOCK_IMMUTABLE_BASELINE/);
+    });
+    await scenario("product edits audit increases, decreases, zero and unchanged stock", async () => {
+      await edit({ nume_produs: "Edited toy" }, 12, 7);
+      await edit({}, 3, 12);
+      await edit({}, 0, 3);
+      await edit({ brand: "Updated brand" }, 0, 3); // safe retry
+      await edit({ descriere: "Metadata only" });
+      assert.equal((await product()).stoc_actual, 0);
+      assert.equal((await product()).nume_produs, "Edited toy");
+      const rows = await query("select * from public.stock_movements order by created_at,id");
+      assert.deepEqual(rows.map(row => row.quantity), [5, -9, -3]);
+      for (const row of rows) {
+        assert.equal(row.reason, "Ajustare manuală din editare produs");
+        assert.equal(row.movement_type, "count_adjustment");
+        assert.equal(row.created_by, admin);
+      }
+    });
+    await scenario("stale stock edits abort, unchanged fields preserve concurrent movements", async () => {
+      await move("stock_in", 2);
+      await fail("select public.update_product_with_stock(1,$1,15,7)", ['{"nume_produs":"Stale"}'], /STOCK_CHANGED/);
+      await edit({ brand: "Fresh metadata", stoc_actual: 100, opening_stock: 100, is_archived: true });
+      assert.equal((await product()).stoc_actual, 9);
+      assert.equal((await product()).opening_stock, 7);
+      assert.equal((await product()).is_archived, false);
+      assert.equal((await product()).nume_produs, "Legacy toy");
+      assert.equal(await count(), 1);
+    });
+    await scenario("invalid metadata rolls back stock and audit too", async () => {
+      await fail("select public.update_product_with_stock(1,$1,12,7)", ['{"stoc_critic":-1}'], /critical_stock_nonnegative/);
+      assert.equal((await product()).stoc_actual, 7);
+      assert.equal(await count(), 0);
+      await fail("select public.update_product_with_stock(1,'{}',-1,7)", [], /STOCK_INVALID_QUANTITY/);
+      await db.exec("update public.produse set is_archived=true where id=1");
+      await fail("select public.update_product_with_stock(1,'{}',12,7)", [], /STOCK_PRODUCT_ARCHIVED/);
+      await query("select set_config('request.jwt.claim.sub',$1,true)", [customer]);
+      await fail("select public.update_product_with_stock(1,'{}',12,7)", [], /STOCK_ADMIN_REQUIRED/);
     });
     await scenario(
       "legacy stock and threshold survive without fabricated history",

@@ -1,5 +1,6 @@
 "use client";
 import type { InventorySummary } from "@/lib/inventory-query";
+import NumericInput from "@/app/components/NumericInput";
 
 import { useEffect, useState } from "react";
 import {
@@ -21,12 +22,14 @@ import dashboard from "./dashboard.module.css";
 import styles from "./stock.module.css";
 
 type Props = {
+  refreshVersion: number;
   selectedId: number | null;
   selectProduct: (id: number | null) => void;
   refreshProducts: () => Promise<void>;
 };
 
 export default function StockManagement({
+  refreshVersion,
   selectedId,
   selectProduct,
   refreshProducts,
@@ -48,11 +51,13 @@ export default function StockManagement({
   }>({ movements: [], count: 0 });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [productError, setProductError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [type, setType] =
     useState<Exclude<MovementType, "reversal">>("stock_in");
   const [amount, setAmount] = useState("");
+  const [adjustmentDirection, setAdjustmentDirection] = useState("add");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [reversing, setReversing] = useState<StockMovement | null>(null);
@@ -62,17 +67,23 @@ export default function StockManagement({
     const controller = new AbortController();
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
     async function load() {
-      let query = supabase.from("inventory_products").select(INVENTORY_SUMMARY_COLUMNS, { count: "exact" });
+      setProductError("");
+      let query = supabase.from("produse").select(INVENTORY_SUMMARY_COLUMNS, { count: "exact" });
       if (productSearch.trim()) query = query.or(`nume_produs.ilike.${searchPattern(productSearch)},cod_bara.ilike.${searchPattern(productSearch)}`);
       const { data, count, error } = await query.order("id", { ascending: false }).range((productPage-1)*24, productPage*24-1).abortSignal(signal).overrideTypes<InventorySummary[], { merge: false }>();
       if (error) throw error;
-      const selected = selectedId ? await supabase.from("inventory_products").select(INVENTORY_SUMMARY_COLUMNS).eq("id", selectedId).abortSignal(signal).single().overrideTypes<InventorySummary, { merge: false }>() : null;
+      const selected = selectedId ? await supabase.from("produse").select(INVENTORY_SUMMARY_COLUMNS).eq("id", selectedId).abortSignal(signal).single().overrideTypes<InventorySummary, { merge: false }>() : null;
       if (selected?.error) throw selected.error;
       if (!controller.signal.aborted) { setProducts(data ?? []); setProductCount(count ?? 0); setSelectedProduct(selected?.data ?? undefined); }
     }
-    const timer = setTimeout(() => void load().catch(() => { if (!controller.signal.aborted) setLoadError("Produsele nu pot fi încărcate."); }),250);
+    const timer = setTimeout(() => void load().catch(() => {
+      if (!controller.signal.aborted) {
+        setSelectedProduct(undefined);
+        setProductError("Produsele nu pot fi încărcate.");
+      }
+    }),250);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [selectedId, productSearch, productPage, revision]);
+  }, [selectedId, productSearch, productPage, revision, refreshVersion]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -100,7 +111,7 @@ export default function StockManagement({
     }
     void load();
     return () => controller.abort();
-  }, [selectedId, from, to, userId, filterType, page, revision]);
+  }, [selectedId, from, to, userId, filterType, page, revision, refreshVersion]);
 
   async function saveMovement(event: React.FormEvent) {
     event.preventDefault();
@@ -108,10 +119,12 @@ export default function StockManagement({
     setBusy(true);
     setMessage("");
     try {
+      if (!Number.isSafeInteger(Number(amount)) || Number(amount) < 1)
+        throw new Error("Introduceți o cantitate întreagă, minimum 1.");
       await recordStockMovement({
         productId: product.id,
         type,
-        amount: Number(amount),
+        amount: type === "count_adjustment" && adjustmentDirection === "subtract" ? -Number(amount) : Number(amount),
         currentStock: product.stoc_actual,
         reason,
         notes,
@@ -132,11 +145,12 @@ export default function StockManagement({
 
   async function reverse(event: React.FormEvent) {
     event.preventDefault();
-    const { data: target } = await supabase.from("inventory_products").select(INVENTORY_SUMMARY_COLUMNS).eq("id", reversing?.product_id ?? 0).single().overrideTypes<InventorySummary, { merge: false }>();
-    if (!reversing || !target || busy) return;
+    if (!reversing || busy) return;
     setBusy(true);
     setMessage("");
     try {
+      const { data: target, error } = await supabase.from("produse").select(INVENTORY_SUMMARY_COLUMNS).eq("id", reversing.product_id).single().overrideTypes<InventorySummary, { merge: false }>();
+      if (error) throw error;
       await reverseStockMovement(reversing, target.stoc_actual, reversalReason);
       setReversing(null);
       setReversalReason("");
@@ -238,13 +252,19 @@ export default function StockManagement({
           </select>
         </label>
       </div>
-      {product && (
+      {productError && (
+        <p role="alert">
+          {productError}{" "}
+          <button onClick={() => setRevision((value) => value + 1)}>Reîncarcă</button>
+        </p>
+      )}
+      {product && product.id === selectedId && (
         <div className={styles.detail}>
           <h3>
             {product.nume_produs} — {product.cod_bara}
           </h3>
           <p>
-            Stoc: <strong>{product.stoc_actual}</strong> · Prag critic:{" "}
+            Stoc: <strong>{product.stoc_actual} cutii</strong> · Prag critic:{" "}
             {product.critical_stock_level ?? product.stoc_critic} · Sold
             inițial: {product.opening_stock ?? 0}
           </p>
@@ -273,14 +293,21 @@ export default function StockManagement({
                     ))}
                 </select>
               </label>
+              {type === "count_adjustment" && (
+                <label>
+                  Sensul corecției
+                  <select value={adjustmentDirection} disabled={busy} onChange={(e) => setAdjustmentDirection(e.target.value)}>
+                    <option value="add">Adaugă la stoc</option>
+                    <option value="subtract">Scade din stoc</option>
+                  </select>
+                </label>
+              )}
               <label>
-                {type === "count_adjustment"
-                  ? "Diferență (+ / −), nu stocul final"
-                  : "Cantitate (pozitivă)"}
-                <input
+                Cantitate (cutii, pozitivă)
+                <NumericInput
                   type="number"
                   step="1"
-                  min={type === "count_adjustment" ? -2147483647 : 1}
+                  min="1"
                   max="2147483647"
                   required
                   value={amount}

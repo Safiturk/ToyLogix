@@ -123,6 +123,10 @@ export function stockError(error: unknown) {
       ? String(error.message)
       : "";
   const messages: Record<string, string> = {
+    product_retail_nonnegative_finite: "Prețul recomandat trebuie să fie un număr finit, minimum 0.",
+    product_wholesale_nonnegative_finite: "Prețul en-gros trebuie să fie un număr finit, minimum 0.",
+    product_pack_positive: "Numărul de bucăți per cutie trebuie să fie minimum 1.",
+    STOCK_CHANGED: "Stocul a fost modificat între timp. Redeschideți produsul și verificați cantitatea înainte de salvare.",
     STOCK_INSUFFICIENT:
       "Stoc insuficient. Reîncărcați produsul și verificați cantitatea.",
     STOCK_LIMIT_EXCEEDED: "Stocul depășește limita permisă.",
@@ -145,6 +149,18 @@ export function stockError(error: unknown) {
 
 // Explicit metadata allowlist: stale product forms must never overwrite stock.
 export function productMetadata(product: Record<string, unknown>) {
+  for (const [key, label, min, integer] of [
+    ["pret_retail", "Prețul recomandat", 0, false],
+    ["pret_engros", "Prețul en-gros", 0, false],
+    ["bucati_per_cutie", "Numărul de bucăți per cutie", 1, true],
+    ["stoc_critic", "Pragul de stoc critic", 0, true],
+  ] as const) {
+    if (!(key in product)) continue;
+    const value = product[key];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < min ||
+        (integer && (!Number.isSafeInteger(value) || value > 2147483647)))
+      throw new Error(`${label} trebuie să fie ${integer ? "un număr întreg" : "un număr finit"}, minimum ${min}.`);
+  }
   return Object.fromEntries(
     [
       "cod_bara",

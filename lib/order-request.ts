@@ -3,6 +3,13 @@ import type { ProductCard } from "./catalog.ts";
 
 export type CartLine = { product: ProductCard; boxes: number };
 export const MAX_BOXES = 100000;
+export function maxCartBoxes(product: ProductCard) {
+  if (!Number.isSafeInteger(product.stoc_actual) || product.stoc_actual < 0 ||
+      !Number.isSafeInteger(product.bucati_per_cutie) || product.bucati_per_cutie < 1)
+    return 0;
+  // Stock and cart quantities are both measured in boxes.
+  return Math.min(MAX_BOXES, product.stoc_actual);
+}
 export const requestNotice =
   "Acest document reprezintă exclusiv o cerere de comandă, nu o comandă confirmată sau o dovadă de plată. Confirmarea finală, disponibilitatea, prețurile și informațiile de plată vor fi verificate separat de ToyLogix.";
 export const paymentNote =
@@ -30,7 +37,7 @@ export function parseCart(raw: string | null): CartLine[] {
     const data: unknown = JSON.parse(raw || "[]");
     if (!Array.isArray(data)) return [];
     const seen = new Set<number>();
-    return data.filter((line): line is CartLine => {
+    return data.flatMap((line): CartLine[] => {
       if (
         !line?.product ||
         !validProduct(line.product) ||
@@ -39,9 +46,10 @@ export function parseCart(raw: string | null): CartLine[] {
         line.boxes > MAX_BOXES ||
         seen.has(line.product.id)
       )
-        return false;
+        return [];
       seen.add(line.product.id);
-      return true;
+      const boxes = Math.min(line.boxes, maxCartBoxes(line.product));
+      return boxes > 0 ? [{ ...line, boxes }] : [];
     });
   } catch {
     return [];

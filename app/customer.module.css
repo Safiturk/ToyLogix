@@ -1962,3 +1962,13 @@
   .favoriteProduct h3 { font-size: 14px; }
   .favoriteItem > .textButton { margin-left: auto; }
 }
+
+/* One content edge for the header, cart trigger and every catalog view. */
+.page { --store-width: 1600px; --store-gutter: 32px; }
+.container, .categoryPage .container, .headerInner {
+  max-width: var(--store-width);
+  padding-inline: var(--store-gutter);
+}
+@media (max-width: 767px) {
+  .page { --store-gutter: 16px; }
+}
