@@ -26,15 +26,15 @@
 }
 .panel input,
 .panel select {
-  border: 1px solid #cbd5e1;
+  border:1px solid var(--ui-line, #cbd5e1);
   border-radius: 8px;
   padding: 8px;
-  background: white;
+  background:var(--ui-surface, white);
   max-width: 100%;
 }
 .panel button {
-  background: #e0e7ff;
-  color: #312e81;
+  background:var(--ui-soft, #e0e7ff);
+  color:var(--ui-ink, #312e81);
   padding: 8px 12px;
   border-radius: 8px;
   font-weight: 600;
@@ -45,12 +45,12 @@
   cursor: not-allowed;
 }
 .panel a {
-  color: #4338ca;
+  color:var(--ui-accent, #4338ca);
   text-decoration: underline;
 }
 .detail {
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
+  border:1px solid var(--ui-line, #cbd5e1);
+  background:var(--ui-soft, #f8fafc);
   padding: 16px;
   border-radius: 12px;
   margin: 16px 0;
@@ -71,13 +71,13 @@
 .table td,
 .table th {
   padding: 10px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom:1px solid var(--ui-line, #e2e8f0);
   vertical-align: top;
 }
 .table small {
   display: block;
   overflow-wrap: anywhere;
-  color: #64748b;
+  color:var(--ui-muted, #64748b);
 }
 .pagination {
   display: flex;

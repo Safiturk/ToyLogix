@@ -70,7 +70,7 @@ export default function EmailConfirmedPage() {
             </div>
             <h2 id="confirmation-title">
               {state === "checking"
-                ? "Verificăm confirmarea…"
+                ? "Verificam confirmarea…"
                 : state === "confirmed"
                   ? "Email confirmat cu succes!"
                   : state === "invalid"
@@ -79,12 +79,12 @@ export default function EmailConfirmedPage() {
             </h2>
             <p className={s.intro}>
               {state === "checking"
-                ? "Te rugăm să aștepți câteva momente."
+                ? "Te rugam sa astepti cateva momente."
                 : state === "confirmed"
-                  ? "Adresa ta de email este confirmată. Accesul la catalog este disponibil după aprobarea contului de către echipa ToyLogix."
+                  ? "Adresa ta de email este confirmata. Accesul la catalog este disponibil dupa aprobarea contului de catre echipa ToyLogix."
                   : state === "invalid"
-                    ? "Linkul poate fi expirat sau deja folosit. Dacă ai confirmat deja adresa, poți continua către autentificare. În caz contrar, contactează echipa ToyLogix pentru un nou link."
-                    : "Verifică conexiunea și reîncarcă pagina pentru a încerca din nou."}
+                    ? "Linkul poate fi expirat sau deja folosit. Daca ai confirmat deja adresa, poti continua catre autentificare. In caz contrar, contacteaza echipa ToyLogix pentru un nou link."
+                    : "Verifica conexiunea si reincarca pagina pentru a incerca din nou."}
             </p>
           </div>
           {state !== "checking" && (
@@ -94,7 +94,7 @@ export default function EmailConfirmedPage() {
           )}
         </section>
       </div>
-      <footer className={s.footer}>ToyLogix · Jucării & distribuție B2B</footer>
+      <footer className={s.footer}>ToyLogix · Jucarii & distributie B2B</footer>
     </main>
   );
 }

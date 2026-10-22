@@ -49,13 +49,13 @@ export default function CategoryDrawer({
       <div className={s.menuContent}>
         <header>
           <div>
-            <span className={s.eyebrow}>DESCOPERĂ TOYLOGIX</span>
+            <span className={s.eyebrow}>DESCOPERA TOYLOGIX</span>
             <h2 id="category-menu-title">Categorii</h2>
           </div>
           <button
             onClick={dismiss}
             className={s.iconButton}
-            aria-label="Închide categoriile"
+            aria-label="Inchide categoriile"
           >
             ✕
           </button>

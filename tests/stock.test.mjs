@@ -77,7 +77,7 @@ test("database errors explain shortages and duplicate reversals", () => {
   );
   assert.match(
     stockError({ message: "STOCK_ALREADY_REVERSED" }),
-    /deja stornată/,
+    /deja stornata/,
   );
   assert.match(stockError({ message: "network failed" }), /istoricul/);
 });

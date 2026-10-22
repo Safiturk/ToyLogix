@@ -20,7 +20,7 @@ begin
     if p_stock <> product.stoc_actual then
       if product.stoc_actual <> p_expected_stock then raise exception 'STOCK_CHANGED'; end if;
       perform public.record_stock_movement(p_product_id,'count_adjustment',
-        p_stock-product.stoc_actual,'Ajustare manuală din editare produs');
+        p_stock-product.stoc_actual,'Ajustare manuala din editare produs');
     end if;
   end if;
   select coalesce(jsonb_object_agg(key,value),'{}'::jsonb) into allowed

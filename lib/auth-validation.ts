@@ -9,23 +9,23 @@ export function registrationErrorMessage(
 ) {
   const code = error?.code;
   if (error?.message.toLowerCase().includes("sending confirmation email")) {
-    return "Emailul de confirmare nu a putut fi trimis. Contactează echipa ToyLogix pentru activarea contului.";
+    return "Emailul de confirmare nu a putut fi trimis. Contacteaza echipa ToyLogix pentru activarea contului.";
   }
   if (code === "user_already_exists" || code === "email_exists") {
-    return "Există deja un cont cu această adresă. Încearcă autentificarea sau recuperarea parolei.";
+    return "Exista deja un cont cu aceasta adresa. Incearca autentificarea sau recuperarea parolei.";
   }
   if (
     code === "over_email_send_rate_limit" ||
     code === "over_request_rate_limit" ||
     error?.status === 429
   ) {
-    return "Prea multe încercări. Așteaptă câteva minute înainte de a încerca din nou.";
+    return "Prea multe incercari. Asteapta cateva minute inainte de a incerca din nou.";
   }
   if (code === "weak_password") {
-    return "Parola nu îndeplinește cerințele de securitate. Alege o parolă mai lungă și mai puternică.";
+    return "Parola nu indeplineste cerintele de securitate. Alege o parola mai lunga si mai puternica.";
   }
   if (code === "signup_disabled" || code === "email_provider_disabled") {
-    return "Înregistrarea este momentan dezactivată. Contactează echipa ToyLogix.";
+    return "Inregistrarea este momentan dezactivata. Contacteaza echipa ToyLogix.";
   }
-  return `Contul nu a putut fi creat. Contactează echipa ToyLogix. Cod: ${code || "registration_unavailable"}.`;
+  return `Contul nu a putut fi creat. Contacteaza echipa ToyLogix. Cod: ${code || "registration_unavailable"}.`;
 }

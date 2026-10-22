@@ -4,6 +4,7 @@ import type { InventoryProduct } from "./models";
 import { supabase } from "@/lib/supabase";
 import { hasArchiveColumn, productPageQuery } from "@/lib/catalog-query";
 import dashboard from "./dashboard.module.css";
+import ui from "./inventory.module.css";
 
 type Props = {
   enabled: boolean;
@@ -63,7 +64,7 @@ export default function ProductInventory({
         setTotal(count ?? 0);
       } catch {
         if (!controller.signal.aborted)
-          setError("Inventarul nu poate fi încărcat.");
+          setError("Inventarul nu poate fi incarcat.");
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -75,14 +76,15 @@ export default function ProductInventory({
     };
   }, [enabled, archiveFilter, search, page, refreshVersion, retry]);
   return (
-    <section className={`${dashboard.section} ${dashboard.inventory}`}>
+    <section className={`${dashboard.section} ${dashboard.inventory} ${ui.inventory}`}>
       <h2 className="text-xl font-bold text-slate-800">
         Inventar Produse ({total})
       </h2>
-      <label className="block my-3 text-sm">
+      <div className={ui.toolbar}>
+      <label>
         Stare produse{" "}
         <select
-          className="border rounded p-2"
+          className={ui.control}
           value={archiveFilter}
           onChange={(e) => {
             setArchiveFilter(e.target.value as typeof archiveFilter);
@@ -96,10 +98,11 @@ export default function ProductInventory({
         </select>
       </label>
 
-      <label className="block my-3 text-sm">
-        Caută produse{" "}
+      <label className={ui.search}>
+        Cauta produse{" "}
         <input
-          className="border rounded p-2"
+          className={ui.control}
+          placeholder="Nume produs sau cod de bare"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -108,29 +111,29 @@ export default function ProductInventory({
           }}
         />
       </label>
+      </div>
       {loading ? (
-        <p role="status">Se încarcă inventarul…</p>
+        <p role="status">Se incarca inventarul…</p>
       ) : error ? (
         <p role="alert">
           {error}{" "}
           <button onClick={() => setRetry((value) => value + 1)}>
-            Reîncearcă
+            Reincearca
           </button>
         </p>
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className={ui.tableScroll}>
+            <table className={ui.table}>
               <thead>
                 <tr className="border-b bg-slate-50 text-xs font-bold text-slate-600">
                   <th className="p-3">Imagine</th>
-                  <th className="p-3">Cod Bare</th>
                   <th className="p-3">Produs</th>
                   <th className="p-3">Categorie</th>
-                  <th className="p-3">Preț B2B (En-Gros)</th>
-                  <th className="p-3">Preț Recomandat (RRP)</th>
+                  <th className="p-3">Pret B2B</th>
+                  <th className="p-3">Pret recomandat</th>
                   <th className="p-3">Stoc</th>
-                  <th className="p-3">Acțiuni</th>
+                  <th className="p-3">Actiuni</th>
                 </tr>
               </thead>
               <tbody className="divide-y text-xs">
@@ -152,55 +155,52 @@ export default function ProductInventory({
                         />
                       </div>
                     </td>
-                    <td className="p-3 font-mono">{product.cod_bara}</td>
                     <td className="p-3 font-bold">
                       <button
-                        className="text-indigo-700 underline"
+                        className={ui.productName}
+                        title="Vezi detalii si istoric stoc"
                         onClick={() => product.id && showHistory(product.id)}
                       >
                         {product.nume_produs}
                       </button>
+                      <small className={ui.barcode}>{product.cod_bara || "Fara cod de bare"}</small>
                       {product.is_archived && (
                         <span className="block text-slate-500">Arhivat</span>
                       )}
                     </td>
                     <td className="p-3">
-                      <span className="px-2 py-0.5 bg-slate-100 rounded text-[11px]">
+                      <span className={ui.category}>
                         {product.categorie}
                       </span>
                     </td>
-                    <td className="p-3 font-bold text-indigo-600">
+                    <td className={ui.price}>
                       {product.pret_engros} RON
                     </td>
-                    <td className="p-3 text-slate-500 font-medium">
+                    <td className={ui.price}>
                       {product.pret_retail} RON
                     </td>
                     <td className="p-3">
                       <span
-                        className={`px-2 py-1 rounded font-bold ${
-                          product.stoc_actual <= product.stoc_critic
-                            ? "bg-rose-100 text-rose-700"
-                            : "bg-emerald-100 text-emerald-700"
-                        }`}
+                        className={`${ui.stock} ${product.stoc_actual <= product.stoc_critic ? ui.lowStock : ""}`}
                       >
                         {product.stoc_actual} buc
                       </span>
                     </td>
-                    <td className="p-3 flex gap-2">
+                    <td className={ui.actionsCell}>
                       <button
                         onClick={() => editProduct(product)}
-                        className="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 font-bold transition"
+                        className={ui.edit}
                       >
-                        Editează
+                        Editeaza
                       </button>
                       <button
                         onClick={() =>
                           product.id &&
                           archiveProduct(product.id, !product.is_archived)
                         }
-                        className="px-3 py-1 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 font-bold transition"
+                        className={ui.archive}
                       >
-                        {product.is_archived ? "Reactivează" : "Arhivează"}
+                        {product.is_archived ? "Reactiveaza" : "Arhiveaza"}
                       </button>
                     </td>
                   </tr>
@@ -208,9 +208,10 @@ export default function ProductInventory({
               </tbody>
             </table>
           </div>
-          <nav
+          {products.length === 0 && <p className={ui.empty}>Nu exista produse pentru filtrele selectate.</p>}
+          {pageCount > 1 && <nav
             aria-label="Paginare inventar"
-            className="flex gap-4 items-center my-4"
+            className={dashboard.pagination}
           >
             <button
               disabled={page === 1}
@@ -219,7 +220,7 @@ export default function ProductInventory({
                 setLoading(true);
               }}
             >
-              Înapoi
+              Inapoi
             </button>
             <span>
               Pagina {page} din {pageCount} · {total} produse
@@ -231,9 +232,9 @@ export default function ProductInventory({
                 setLoading(true);
               }}
             >
-              Înainte
+              Inainte
             </button>
-          </nav>
+          </nav>}
         </>
       )}
     </section>

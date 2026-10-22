@@ -43,16 +43,16 @@ export async function orderContext(
 ) {
   const config = readPublicEnv(env);
   if (!orderOriginAllowed(request, env.AUTH_SITE_URL))
-    throw new OrderApiError('Origine nepermisă. Reîncarcă pagina.', 403);
+    throw new OrderApiError('Origine nepermisa. Reincarca pagina.', 403);
   const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/)?.[1];
-  if (!token) throw new OrderApiError('Autentifică-te pentru a trimite cererea.', 401);
+  if (!token) throw new OrderApiError('Autentifica-te pentru a trimite cererea.', 401);
   const auth = { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false };
   const client = factory(config.url, config.key, {
     auth, global: { headers: { Authorization: `Bearer ${token}` } },
   });
   const { data, error } = await client.auth.getUser(token);
   if (error || !data.user?.email_confirmed_at)
-    throw new OrderApiError('Sesiunea a expirat. Autentifică-te din nou.', 401);
+    throw new OrderApiError('Sesiunea a expirat. Autentifica-te din nou.', 401);
   return {
     client, user: data.user,
     privileged: env.SUPABASE_SERVICE_ROLE_KEY?.trim()
@@ -63,5 +63,5 @@ export async function orderContext(
 export function orderFailure(error: unknown) {
   return error instanceof OrderApiError
     ? { error: error.message, status: error.status }
-    : { error: 'Serviciul de comenzi nu este disponibil. Încearcă din nou.', status: 503 };
+    : { error: 'Serviciul de comenzi nu este disponibil. Incearca din nou.', status: 503 };
 }

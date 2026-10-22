@@ -250,6 +250,25 @@
 .miniSummary small { display: block; text-align: center; font-size: 11px; color: var(--muted, #716d81); margin-top: 10px; }
 .checkout { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; background: #6546c8; color: #fff; border: 0; border-radius: 11px; padding: 13px 14px; margin-top: 16px; font-weight: 650; font-size: 13px; }
 .checkout:hover:not(:disabled) { background: #5635bb; }
+:global([data-theme="petrol"]) .page { background: #111615; color: #edf5f1; }
+:global([data-theme="petrol"]) .panel, :global([data-theme="petrol"]) .miniCart { background: #1a211e; color: #edf5f1; border-color: #31433a; }
+:global([data-theme="petrol"]) .primary, :global([data-theme="petrol"]) .checkout,
+:global([data-theme="petrol"]) .badge { background: #43e0bb; color: #062e23; border-color: #43e0bb; }
+:global([data-theme="petrol"]) .checkout:hover:not(:disabled) { background: #79efd2; }
+:global([data-theme="petrol"]) .secondary, :global([data-theme="petrol"]) .totals,
+:global([data-theme="petrol"]) .notice, :global([data-theme="petrol"]) .quantity { background: #203b30; color: #c2f4de; border-color: #3d6854; }
+:global([data-theme="petrol"]) .banner { background: #142a25; color: #b8d4cb; }
+:global([data-theme="petrol"]) .quantity button { background: #284b3b; color: #d6f7e7; }
+:global([data-theme="petrol"]) .quantity button:hover:not(:disabled) { background: #39634e; }
+:global([data-theme="petrol"]) .cartLink[type="button"] { background: #203b30; border-color: #3d6854; color: #e4f7ef; }
+:global([data-theme="petrol"]) .cartLink>svg { color: #b7f5dc; }
+:global([data-theme="petrol"]) .add span, :global([data-theme="petrol"]) .line p,
+:global([data-theme="petrol"]) .muted, :global([data-theme="petrol"]) .company dt { color: #a8bcb3; }
+:global([data-theme="petrol"]) .line { border-color: #31433a; }
+:global([data-theme="petrol"]) .page input { background: #17261e; border-color: #4b6b58; color: #edf5f1; }
+:global([data-theme="petrol"]) .page a { color: #7aeac6; }
+:global([data-theme="petrol"]) .logo img { filter: brightness(0) invert(1); }
+:global([data-theme="petrol"]) .page :focus-visible, :global([data-theme="petrol"]) .add :focus-visible { outline-color: #84f5db; }
 :global([data-theme="dark"]) .miniCart { background: #211d2b; }
 :global([data-theme="dark"]) .banner,
 :global([data-theme="dark"]) .quantity { background: #2c253c; color: #d5c5ff; border-color: #51415f; }

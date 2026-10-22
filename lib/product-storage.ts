@@ -9,7 +9,7 @@ export function isProductImageUrl(value: string) {
 }
 export async function uploadProductImage(file: File) {
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024)
-    throw new Error("Folosiți JPEG, PNG sau WebP de maximum 5 MB.");
+    throw new Error("Folositi JPEG, PNG sau WebP de maximum 5 MB.");
   const bitmap = await createImageBitmap(file);
   let blob: Blob;
   try {
@@ -19,13 +19,13 @@ export async function uploadProductImage(file: File) {
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
     const context = canvas.getContext("2d");
-    if (!context) throw new Error("Procesarea imaginii nu este disponibilă.");
+    if (!context) throw new Error("Procesarea imaginii nu este disponibila.");
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((result) => result ? resolve(result) : reject(new Error("Imagine invalidă")), "image/webp", 0.82));
+    blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((result) => result ? resolve(result) : reject(new Error("Imagine invalida")), "image/webp", 0.82));
   } finally { bitmap.close(); }
   const extension = blob.type === "image/webp" ? "webp" : "png";
   const path = `products/${crypto.randomUUID()}.${extension}`;
   const { error } = await supabase.storage.from(PRODUCT_BUCKET).upload(path, blob, { contentType: blob.type, cacheControl: "31536000", upsert: false });
-  if (error) throw new Error("Imaginea nu a putut fi încărcată. Verificați accesul la Storage.");
+  if (error) throw new Error("Imaginea nu a putut fi incarcata. Verificati accesul la Storage.");
   return supabase.storage.from(PRODUCT_BUCKET).getPublicUrl(path).data.publicUrl;
 }

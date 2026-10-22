@@ -52,14 +52,14 @@ function PasswordField({
                 ? "password-help"
                 : undefined
           }
-          placeholder={confirm ? "Repetă parola nouă" : "Introdu parola"}
+          placeholder={confirm ? "Repeta parola noua" : "Introdu parola"}
         />
         <button
           type="button"
           onClick={() => setVisible(!visible)}
           aria-controls={id}
           aria-pressed={visible}
-          aria-label={`${visible ? "Ascunde" : "Arată"}: ${label}`}
+          aria-label={`${visible ? "Ascunde" : "Arata"}: ${label}`}
         >
           <svg
             width="19"
@@ -150,12 +150,12 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
       }
       if (password.length < 8 || !hasPasswordComplexity(password)) {
         setError(
-          "Alege minimum 8 caractere, o literă mare, o cifră și un caracter special.",
+          "Alege minimum 8 caractere, o litera mare, o cifra si un caracter special.",
         );
         return;
       }
       if (!sessionReady) {
-        setError("Linkul nu mai este valid. Solicită un link nou.");
+        setError("Linkul nu mai este valid. Solicita un link nou.");
         return;
       }
     }
@@ -171,8 +171,8 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
         if (error) {
           setError(
             error.code === "same_password"
-              ? "Alege o parolă diferită de cea anterioară."
-              : "Parola nu a putut fi actualizată. Verifică cerințele sau solicită un link nou.",
+              ? "Alege o parola diferita de cea anterioara."
+              : "Parola nu a putut fi actualizata. Verifica cerintele sau solicita un link nou.",
           );
           return;
         }
@@ -216,7 +216,7 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
             ? loginMessages.unavailable
             : profile?.status === "pending" && profile.is_active !== false
             ? loginMessages.approval_pending
-            : "Accesul la cont nu este disponibil. Contactează echipa ToyLogix.",
+            : "Accesul la cont nu este disponibil. Contacteaza echipa ToyLogix.",
         );
         return;
       }
@@ -234,7 +234,7 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
       setError(
         failure instanceof Error
           ? failure.message
-          : "Conexiunea a fost întreruptă. Încearcă din nou.",
+          : "Conexiunea a fost intrerupta. Incearca din nou.",
       );
     } finally {
       setBusy(false);
@@ -246,12 +246,12 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
       ? "Bine ai revenit."
       : mode === "forgot"
         ? "Ai uitat parola?"
-        : "O parolă nouă.";
+        : "O parola noua.";
   return (
     <main className={s.page}>
       <header className={s.header}>
         <BrandLogo className={s.logo} subtitle="PARTNER PORTAL" />
-        <span>Jucării & distribuție B2B</span>
+        <span>Jucarii & distributie B2B</span>
       </header>
       <div className={s.layout}>
         <section className={s.story}>
@@ -260,20 +260,20 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
             <span />
             <span />
           </div>
-          <span className={s.eyebrow}>UN PARTENERIAT. NOI POSIBILITĂȚI.</span>
+          <span className={s.eyebrow}>UN PARTENERIAT. NOI POSIBILITATI.</span>
           <h1>
-            Mai multă joacă.
+            Mai multa joaca.
             <br />
-            <em>Mai mult potențial.</em>
+            <em>Mai mult potential.</em>
           </h1>
           <p>
-            Catalogul, prețurile en-gros și disponibilitatea produselor —
-            într-un singur loc, pentru afacerea ta.
+            Catalogul, preturile en-gros si disponibilitatea produselor —
+            intr-un singur loc, pentru afacerea ta.
           </p>
         </section>
         <section className={s.card} aria-labelledby="access-title">
           <div className={s.cardTop}>
-            <span className={s.eyebrow}>CONTUL TĂU TOYLOGIX</span>
+            <span className={s.eyebrow}>CONTUL TAU TOYLOGIX</span>
             <svg
               width="20"
               height="20"
@@ -290,42 +290,42 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
           <h2 id="access-title">{title}</h2>
           <p className={s.intro}>
             {mode === "login"
-              ? "Intră în cont cu adresa de email și parola ta."
+              ? "Intra in cont cu adresa de email si parola ta."
               : mode === "forgot"
-                ? "Îți trimitem un link pentru a alege o parolă nouă."
-                : "Alege o parolă pe care o folosești doar pentru acest cont."}
+                ? "Iti trimitem un link pentru a alege o parola noua."
+                : "Alege o parola pe care o folosesti doar pentru acest cont."}
           </p>
           {success ? (
             <div className={s.success} role="status">
               <span aria-hidden="true">✓</span>
               <h3>
                 {mode === "forgot"
-                  ? "Verifică emailul"
-                  : "Parola a fost actualizată"}
+                  ? "Verifica emailul"
+                  : "Parola a fost actualizata"}
               </h3>
               <p>
                 {mode === "forgot"
-                  ? "Dacă există un cont eligibil pentru această adresă, vei primi un link de resetare. Verifică și folderul Spam."
-                  : "Te redirecționăm către autentificare. Folosește noua parolă."}
+                  ? "Daca exista un cont eligibil pentru aceasta adresa, vei primi un link de resetare. Verifica si folderul Spam."
+                  : "Te redirectionam catre autentificare. Foloseste noua parola."}
               </p>
-              <Link href="/login">Înapoi la autentificare →</Link>
+              <Link href="/login">Inapoi la autentificare →</Link>
             </div>
           ) : mode === "update" && !sessionReady ? (
             <div className={s.notice} role="status">
               <p>
                 {sessionChecked
-                  ? "Linkul lipsește, a expirat sau a fost deja folosit."
-                  : "Verificăm linkul de resetare…"}
+                  ? "Linkul lipseste, a expirat sau a fost deja folosit."
+                  : "Verificam linkul de resetare…"}
               </p>
               {sessionChecked && (
-                <Link href="/forgot-password">Solicită un link nou →</Link>
+                <Link href="/forgot-password">Solicita un link nou →</Link>
               )}
             </div>
           ) : (
             <form onSubmit={submit} className={s.form} aria-busy={busy}>
               {mode !== "update" && (
                 <div className={s.field}>
-                  <label htmlFor="access-email">Adresă de email</label>
+                  <label htmlFor="access-email">Adresa de email</label>
                   <input
                     id="access-email"
                     type="email"
@@ -340,7 +340,7 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
               {mode !== "forgot" && (
                 <PasswordField
                   id={mode === "login" ? "login-password" : "new-password"}
-                  label={mode === "login" ? "Parolă" : "Parolă nouă"}
+                  label={mode === "login" ? "Parola" : "Parola noua"}
                   value={password}
                   change={setPassword}
                 />
@@ -353,12 +353,12 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
               {mode === "update" && (
                 <>
                   <p id="password-help" className={s.help}>
-                    Minimum 8 caractere, o literă mare, o cifră și un caracter
+                    Minimum 8 caractere, o litera mare, o cifra si un caracter
                     special.
                   </p>
                   <PasswordField
                     id="confirm-password"
-                    label="Confirmă parola nouă"
+                    label="Confirma parola noua"
                     value={confirmation}
                     change={setConfirmation}
                     confirm
@@ -379,12 +379,12 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
               <button className={s.submit} type="submit" disabled={busy}>
                 {busy && <span className={s.spinner} aria-hidden="true" />}
                 {busy
-                  ? "Se procesează…"
+                  ? "Se proceseaza…"
                   : mode === "login"
-                    ? "Intră în cont"
+                    ? "Intra in cont"
                     : mode === "forgot"
                       ? "Trimite linkul de resetare"
-                      : "Salvează parola nouă"}
+                      : "Salveaza parola noua"}
                 {!busy && <span aria-hidden="true">→</span>}
               </button>
             </form>
@@ -392,17 +392,17 @@ export default function AccountAccess({ mode }: { mode: Mode }) {
           <div className={s.cardFooter}>
             {mode === "login" ? (
               <>
-                Nu ai încă un cont?{" "}
+                Nu ai inca un cont?{" "}
                 <Link href="/register">Devino partener</Link>
               </>
             ) : (
-              <Link href="/login">← Înapoi la autentificare</Link>
+              <Link href="/login">← Inapoi la autentificare</Link>
             )}
           </div>
         </section>
       </div>
       <footer className={s.footer}>
-        ToyLogix · Relații de durată. Idei pentru mâine.
+        ToyLogix · Relatii de durata. Idei pentru maine.
       </footer>
     </main>
   );

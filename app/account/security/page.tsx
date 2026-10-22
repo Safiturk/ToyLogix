@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { currentAccount, signOutAccount } from "@/lib/account";
 import { authPost } from "@/lib/auth-client";
 import s from "../../components/account-access.module.css";
+import ui from "../account.module.css";
 
 export default function AccountSecurityPage() {
   const router = useRouter();
@@ -22,7 +23,6 @@ export default function AccountSecurityPage() {
   );
   const [code, setCode] = useState("");
   const [recovery, setRecovery] = useState("");
-  const [codes, setCodes] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -53,7 +53,7 @@ export default function AccountSecurityPage() {
       } catch {
         if (active)
           setMessage(
-            "Securitatea contului nu poate fi verificată. Reîncarcă pagina.",
+            "Securitatea contului nu poate fi verificata. Reincarca pagina.",
           );
       }
     })();
@@ -70,7 +70,7 @@ export default function AccountSecurityPage() {
       await action();
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Operațiunea nu a reușit.",
+        error instanceof Error ? error.message : "Operatiunea nu a reusit.",
       );
     } finally {
       setBusy(false);
@@ -112,7 +112,7 @@ export default function AccountSecurityPage() {
     });
     if (error)
       throw new Error(
-        "Codul nu este valid sau a expirat. Folosește codul curent din aplicație.",
+        "Codul nu este valid sau a expirat. Foloseste codul curent din aplicatie.",
       );
     const { data: allowed, error: denied } =
       await supabase.rpc("toylogix_is_admin");
@@ -122,18 +122,18 @@ export default function AccountSecurityPage() {
     setSetup(null);
     setCode("");
     setMessage(
-      "Verificare reușită. Salvează codurile de recuperare într-un loc sigur.",
+      "Verificare reusita. Accesul de administrator este confirmat.",
     );
   }
 
   return (
     <main className={s.page}>
       <div className={s.confirmationLayout}>
-        <section className={s.card} aria-busy={busy}>
+        <section className={`${s.card} ${ui.securityCard}`} aria-busy={busy}>
           <span className={s.eyebrow}>SECURITATEA CONTULUI</span>
-          <h1>Verificare în doi pași</h1>
+          <h1>Siguranta contului</h1>
           <p className={s.intro}>
-            Pentru administrare, confirmă accesul cu aplicația de autentificare.
+            Verificarea in doi pasi protejeaza accesul de administrator: pe langa parola, folosesti un cod temporar dintr-o aplicatie de pe telefon.
           </p>
           {message && (
             <p role="status" className={s.notice}>
@@ -141,75 +141,41 @@ export default function AccountSecurityPage() {
             </p>
           )}
           {!ready ? (
-            <p>Se verifică accesul…</p>
+            <p>Se verifica accesul…</p>
           ) : verified ? (
             <>
-              <p>Accesul de administrator este verificat.</p>
-              <button
-                className={s.submit}
-                disabled={busy}
-                onClick={() =>
-                  void run(async () => {
-                    if (
-                      !window.confirm(
-                        "Generezi 10 coduri noi? Codurile anterioare nu vor mai funcționa.",
-                      )
-                    )
-                      return;
-                    const { data, error } = await supabase.rpc(
-                      "rotate_recovery_codes",
-                    );
-                    if (error) throw error;
-                    setCodes(data as string[]);
-                  })
-                }
-              >
-                Generează coduri de recuperare
-              </button>
-              {codes.length > 0 && (
-                <div className={s.notice}>
-                  <p>
-                    Se afișează doar acum. Fiecare cod poate fi folosit o
-                    singură dată. Păstrează-le separat de telefon.
-                  </p>
-                  <pre className="overflow-x-auto select-all text-sm">
-                    {codes.join("\n")}
-                  </pre>
-                  <button onClick={() => setCodes([])}>
-                    Am salvat codurile — ascunde
-                  </button>
-                </div>
-              )}
-              <Link className={s.submit} href="/admin">
-                Continuă către administrare →
-              </Link>
-              <Link href="/account">Datele contului</Link>
+              <div className={ui.success}>
+                <strong>✓ Acces confirmat</strong>
+                <p>Poti folosi functiile de administrator. Nu trebuie sa introduci un alt cod acum.</p>
+              </div>
+              <Link className={s.submit} href="/account">Inapoi la contul meu →</Link>
             </>
           ) : (
             <>
               {factors.length === 0 && !setup && (
+                <div className={ui.recovery}><p>1. Deschide o aplicatie precum Google Authenticator sau Microsoft Authenticator pe telefon.</p><p>2. Apasa butonul de mai jos si adauga contul folosind codul QR.</p><p>3. Introdu codul de 6 cifre afisat in aplicatie pentru a confirma.</p>
                 <button
                   className={s.submit}
                   disabled={busy}
                   onClick={() => void run(enroll)}
                 >
-                  Configurează aplicația de autentificare
-                </button>
+                  Incepe configurarea
+                </button></div>
               )}
               {setup && (
                 <div className={s.notice}>
                   <p>
-                    Scanează codul cu aplicația de autentificare, apoi introdu
+                    Scaneaza codul cu aplicatia de autentificare, apoi introdu
                     codul de 6 cifre.
                   </p>
                   <Image
                     src={setup.qr}
-                    alt="Cod QR pentru configurarea autentificării ToyLogix"
+                    alt="Cod QR pentru configurarea autentificarii ToyLogix"
                     width={220}
                     height={220}
                     unoptimized
                   />
-                  <p>Cheie pentru introducere manuală:</p>
+                  <p>Cheie pentru introducere manuala:</p>
                   <code className="break-all select-all">{setup.secret}</code>
                 </div>
               )}
@@ -237,7 +203,7 @@ export default function AccountSecurityPage() {
                     </label>
                   )}
                   <label className={s.field}>
-                    Cod din aplicație
+                    Codul de 6 cifre din aplicatia de pe telefon
                     <input
                       value={code}
                       onChange={(event) =>
@@ -253,16 +219,14 @@ export default function AccountSecurityPage() {
                     />
                   </label>
                   <button className={s.submit} disabled={busy}>
-                    Verifică
+                    Confirma accesul
                   </button>
                 </form>
               )}
               <details className={s.notice}>
                 <summary>Nu mai ai acces la dispozitiv?</summary>
                 <p>
-                  Folosește un cod de recuperare salvat. Dispozitivele 2FA și
-                  sesiunile vor fi revocate. Reconectează-te și configurează un
-                  dispozitiv nou.
+                  Introdu unul dintre codurile de rezerva salvate anterior. Vei fi deconectat de pe toate dispozitivele, iar aplicatia de autentificare actuala va fi eliminata din cont. Apoi te vei conecta din nou si vei configura aplicatia pe noul telefon.
                 </p>
                 <form
                   className={s.form}
@@ -292,7 +256,7 @@ export default function AccountSecurityPage() {
                     />
                   </label>
                   <button className={s.submit} disabled={busy}>
-                    Recuperează accesul
+                    Recupereaza accesul
                   </button>
                 </form>
               </details>

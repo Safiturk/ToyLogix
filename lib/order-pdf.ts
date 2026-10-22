@@ -22,7 +22,7 @@ export function loadPdfAssets(): Promise<PdfAssets> {
   return (assetsPromise ??= (async () => {
     const response = await fetch("/fonts/NotoSans.ttf");
     if (!response.ok)
-      throw new Error("Fontul PDF nu poate fi încărcat. Încearcă din nou.");
+      throw new Error("Fontul PDF nu poate fi incarcat. Incearca din nou.");
     const bytes = new Uint8Array(await response.arrayBuffer());
     let binary = "";
     for (let i = 0; i < bytes.length; i += 8192)
@@ -36,7 +36,7 @@ export function loadPdfAssets(): Promise<PdfAssets> {
         const context = canvas.getContext("2d");
         if (!context) {
           reject(
-            new Error("Sigla PDF nu poate fi pregătită în acest browser."),
+            new Error("Sigla PDF nu poate fi pregatita in acest browser."),
           );
           return;
         }
@@ -45,7 +45,7 @@ export function loadPdfAssets(): Promise<PdfAssets> {
       };
       image.onerror = () =>
         reject(
-          new Error("Sigla ToyLogix nu poate fi încărcată. Încearcă din nou."),
+          new Error("Sigla ToyLogix nu poate fi incarcata. Incearca din nou."),
         );
       image.src = "/toylogix-logo.svg";
     });
@@ -61,13 +61,13 @@ export function createOrderPdf(data: OrderPdfData, assets: PdfAssets) {
   doc.addFont("NotoSans.ttf", "NotoSans", "normal");
   doc.setFont("NotoSans", "normal");
   doc.setProperties({
-    title: "Cerere de comandă ToyLogix",
+    title: "Cerere de comanda ToyLogix",
     author: "ToyLogix",
   });
   doc.addImage(assets.logo, "PNG", 14, 12, 58, 14.13);
   doc.setFontSize(18);
   doc.setTextColor(83, 48, 153);
-  doc.text("Cerere de comandă B2B", 14, 38);
+  doc.text("Cerere de comanda B2B", 14, 38);
   doc.setFontSize(9);
   doc.setTextColor(70);
   doc.text(
@@ -106,7 +106,7 @@ export function createOrderPdf(data: OrderPdfData, assets: PdfAssets) {
         "Cod / cod de bare",
         "Cantitate",
         "Ambalare",
-        "Preț unitar",
+        "Pret unitar",
         "Subtotal",
       ],
     ],
@@ -141,11 +141,11 @@ export function createOrderPdf(data: OrderPdfData, assets: PdfAssets) {
     styles,
     body: [
       [
-        `Total cutii: ${total.boxes} | Total bucăți: ${total.quantity}\nTotal general estimativ: ${money(total.cents)}`,
+        `Total cutii: ${total.boxes} | Total bucati: ${total.quantity}\nTotal general estimativ: ${money(total.cents)}`,
       ],
       [requestNotice],
       [
-        `Notă privind etapa ulterioară confirmării plății:\n${paymentNote}\nPlata nu este confirmată prin acest document.`,
+        `Nota privind etapa ulterioara confirmarii platii:\n${paymentNote}\nPlata nu este confirmata prin acest document.`,
       ],
     ],
   });
@@ -155,7 +155,7 @@ export function createOrderPdf(data: OrderPdfData, assets: PdfAssets) {
     doc.setFontSize(8);
     doc.setTextColor(110);
     doc.text(
-      `ToyLogix · Cerere de comandă · Pagina ${page} / ${pages}`,
+      `ToyLogix · Cerere de comanda · Pagina ${page} / ${pages}`,
       14,
       288,
     );

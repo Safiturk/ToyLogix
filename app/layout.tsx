@@ -5,7 +5,7 @@ import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "ToyLogix - Sistem",
-  description: "Gestiune stocuri și magazin",
+  description: "Gestiune stocuri si magazin",
   manifest: "/manifest.json",
   applicationName: "ToyLogix",
   icons: {

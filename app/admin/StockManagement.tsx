@@ -79,7 +79,7 @@ export default function StockManagement({
     const timer = setTimeout(() => void load().catch(() => {
       if (!controller.signal.aborted) {
         setSelectedProduct(undefined);
-        setProductError("Produsele nu pot fi încărcate.");
+        setProductError("Produsele nu pot fi incarcate.");
       }
     }),250);
     return () => { clearTimeout(timer); controller.abort(); };
@@ -120,7 +120,7 @@ export default function StockManagement({
     setMessage("");
     try {
       if (!Number.isSafeInteger(Number(amount)) || Number(amount) < 1)
-        throw new Error("Introduceți o cantitate întreagă, minimum 1.");
+        throw new Error("Introduceti o cantitate intreaga, minimum 1.");
       await recordStockMovement({
         productId: product.id,
         type,
@@ -132,7 +132,7 @@ export default function StockManagement({
       setAmount("");
       setReason("");
       setNotes("");
-      setMessage("Mișcarea a fost înregistrată.");
+      setMessage("Miscarea a fost inregistrata.");
     } catch (error) {
       setMessage(stockError(error));
     } finally {
@@ -155,7 +155,7 @@ export default function StockManagement({
       setReversing(null);
       setReversalReason("");
       setMessage(
-        "Stornarea a fost înregistrată. Mișcarea originală a fost păstrată.",
+        "Stornarea a fost inregistrata. Miscarea originala a fost pastrata.",
       );
     } catch (error) {
       setMessage(stockError(error));
@@ -173,12 +173,12 @@ export default function StockManagement({
       className={`${dashboard.section} ${styles.panel}`}
       aria-labelledby="stock-title"
     >
-      <h2 id="stock-title">Stoc și istoric mișcări</h2>
+      <h2 id="stock-title">Stoc si istoric miscari</h2>
       <div className={styles.filters}>
         <label>
           Produs
-          <input placeholder="Caută produs sau cod" value={productSearch} onChange={(e) => { setProductSearch(e.target.value); setProductPage(1); }} />
-          <span><button disabled={productPage===1} onClick={() => setProductPage(productPage-1)}>Înapoi</button> {productPage} / {Math.max(1,Math.ceil(productCount/24))} <button disabled={productPage*24>=productCount} onClick={() => setProductPage(productPage+1)}>Înainte</button></span>
+          <input placeholder="Cauta produs sau cod" value={productSearch} onChange={(e) => { setProductSearch(e.target.value); setProductPage(1); }} />
+          <span><button disabled={productPage===1} onClick={() => setProductPage(productPage-1)}>Inapoi</button> {productPage} / {Math.max(1,Math.ceil(productCount/24))} <button disabled={productPage*24>=productCount} onClick={() => setProductPage(productPage+1)}>Inainte</button></span>
           <select
             value={selectedId ?? ""}
             disabled={busy}
@@ -213,7 +213,7 @@ export default function StockManagement({
           />
         </label>
         <label>
-          Până la
+          Pana la
           <input
             type="date"
             value={to}
@@ -227,7 +227,7 @@ export default function StockManagement({
           Utilizator (ID)
           <input
             value={userId}
-            placeholder="Toți utilizatorii"
+            placeholder="Toti utilizatorii"
             onChange={(e) => {
               setUserId(e.target.value);
               setPage(0);
@@ -235,7 +235,7 @@ export default function StockManagement({
           />
         </label>
         <label>
-          Tip operațiune
+          Tip operatiune
           <select
             value={filterType}
             onChange={(e) => {
@@ -255,7 +255,7 @@ export default function StockManagement({
       {productError && (
         <p role="alert">
           {productError}{" "}
-          <button onClick={() => setRevision((value) => value + 1)}>Reîncarcă</button>
+          <button onClick={() => setRevision((value) => value + 1)}>Reincarca</button>
         </p>
       )}
       {product && product.id === selectedId && (
@@ -266,20 +266,20 @@ export default function StockManagement({
           <p>
             Stoc: <strong>{product.stoc_actual} cutii</strong> · Prag critic:{" "}
             {product.critical_stock_level ?? product.stoc_critic} · Sold
-            inițial: {product.opening_stock ?? 0}
+            initial: {product.opening_stock ?? 0}
           </p>
           <p>
             {product.categorie} · {product.brand} · {product.pret_engros} RON
           </p>
           {product.is_archived ? (
             <p>
-              Produs arhivat. Istoricul este păstrat; reactivați produsul pentru
-              operațiuni.
+              Produs arhivat. Istoricul este pastrat; reactivati produsul pentru
+              operatiuni.
             </p>
           ) : (
             <form onSubmit={saveMovement} className={styles.form}>
               <label>
-                Operațiune
+                Operatiune
                 <select
                   value={type}
                   disabled={busy}
@@ -295,15 +295,15 @@ export default function StockManagement({
               </label>
               {type === "count_adjustment" && (
                 <label>
-                  Sensul corecției
+                  Sensul corectiei
                   <select value={adjustmentDirection} disabled={busy} onChange={(e) => setAdjustmentDirection(e.target.value)}>
-                    <option value="add">Adaugă la stoc</option>
+                    <option value="add">Adauga la stoc</option>
                     <option value="subtract">Scade din stoc</option>
                   </select>
                 </label>
               )}
               <label>
-                Cantitate (cutii, pozitivă)
+                Cantitate (cutii, pozitiva)
                 <NumericInput
                   type="number"
                   step="1"
@@ -325,7 +325,7 @@ export default function StockManagement({
                 />
               </label>
               <label>
-                Note (opțional)
+                Note (optional)
                 <input
                   value={notes}
                   disabled={busy}
@@ -333,11 +333,11 @@ export default function StockManagement({
                 />
               </label>
               <p>
-                Data și utilizatorul sunt înregistrate automat. Stocul negativ
+                Data si utilizatorul sunt inregistrate automat. Stocul negativ
                 este interzis.
               </p>
               <button disabled={busy} type="submit">
-                {busy ? "Se salvează…" : "Înregistrează mișcarea"}
+                {busy ? "Se salveaza…" : "Inregistreaza miscarea"}
               </button>
             </form>
           )}
@@ -360,7 +360,7 @@ export default function StockManagement({
             · Efect: {-reversing.quantity} · {reversing.reason}
           </p>
           <label>
-            Motivul stornării
+            Motivul stornarii
             <input
               autoFocus
               required
@@ -370,27 +370,27 @@ export default function StockManagement({
             />
           </label>
           <button type="submit" disabled={busy}>
-            Confirmă stornarea
+            Confirma stornarea
           </button>{" "}
           <button
             type="button"
             disabled={busy}
             onClick={() => setReversing(null)}
           >
-            Anulează
+            Anuleaza
           </button>
         </form>
       )}
-      <h3 id="stock-history">Istoric mișcări</h3>
+      <h3 id="stock-history">Istoric miscari</h3>
       {loadError ? (
         <p role="alert">
           {loadError}{" "}
           <button onClick={() => setRevision((value) => value + 1)}>
-            Reîncarcă
+            Reincarca
           </button>
         </p>
       ) : loading ? (
-        <p role="status">Se încarcă istoricul…</p>
+        <p role="status">Se incarca istoricul…</p>
       ) : (
         <>
           <div className={styles.table}>
@@ -430,10 +430,10 @@ export default function StockManagement({
                     </td>
                     <td>
                       {movement.reversal_of ? (
-                        <small>Stornează: {movement.reversal_of}</small>
+                        <small>Storneaza: {movement.reversal_of}</small>
                       ) : movement.reversed_at ? (
                         <>
-                          Stornată la{" "}
+                          Stornata la{" "}
                           {new Date(movement.reversed_at).toLocaleString(
                             "ro-RO",
                           )}
@@ -451,7 +451,7 @@ export default function StockManagement({
                             setReversalReason("");
                           }}
                         >
-                          Stornează
+                          Storneaza
                         </button>
                       )}
                     </td>
@@ -460,28 +460,28 @@ export default function StockManagement({
               </tbody>
             </table>
           </div>
-          {!result.count && <p>Nu există mișcări pentru filtrele selectate.</p>}
+          {!result.count && <p>Nu exista miscari pentru filtrele selectate.</p>}
           <div className={styles.pagination}>
             <button
               disabled={page === 0 || busy}
               onClick={() => setPage((value) => value - 1)}
             >
-              Înapoi
+              Inapoi
             </button>
             <span>
-              Pagina {page + 1} · {result.count} mișcări
+              Pagina {page + 1} · {result.count} miscari
             </span>
             <button
               disabled={(page + 1) * MOVEMENT_PAGE_SIZE >= result.count || busy}
               onClick={() => setPage((value) => value + 1)}
             >
-              Înainte
+              Inainte
             </button>
             <button
               disabled={loading || busy}
               onClick={() => setRevision((value) => value + 1)}
             >
-              Reîncarcă
+              Reincarca
             </button>
           </div>
         </>

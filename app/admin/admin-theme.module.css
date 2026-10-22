@@ -1,0 +1,22 @@
+.scope { min-height: 100vh; }
+.scope[data-admin-theme="dark"] {
+  --ui-bg: #15121d; --ui-surface: #211d2b; --ui-soft: #2c2538;
+  --ui-line: #443951; --ui-ink: #f1edf8; --ui-muted: #b8aec9;
+  --ui-accent: #bba3ff; --ui-scheme: dark; --ui-on-accent: #10251d;
+}
+.scope[data-admin-theme="petrol"] {
+  --ui-bg: #111615; --ui-surface: #1a211e; --ui-soft: #203b30;
+  --ui-line: #365345; --ui-ink: #edf5f1; --ui-muted: #b3cfc7;
+  --ui-accent: #43e0bb; --ui-scheme: dark; --ui-on-accent: #10251d;
+}
+.scope:not([data-admin-theme="light"]) { background: var(--ui-bg); color: var(--ui-ink); color-scheme: dark; }
+/* Legacy utility styles share the same palette as the admin modules. */
+.scope:not([data-admin-theme="light"]) :global(.bg-white) { background-color: var(--ui-surface); }
+.scope:not([data-admin-theme="light"]) :is(:global(.bg-slate-50), :global(.bg-slate-100), :global(.bg-gray-100), :global(.bg-indigo-50), :global(.bg-purple-100), :global(.bg-blue-100)) { background-color: var(--ui-soft); }
+.scope:not([data-admin-theme="light"]) :is(:global(.text-slate-900), :global(.text-slate-800), :global(.text-slate-700), :global(.text-slate-600)) { color: var(--ui-ink); }
+.scope:not([data-admin-theme="light"]) :is(:global(.text-slate-500), :global(.text-slate-400), :global(.text-gray-400)) { color: var(--ui-muted); }
+.scope:not([data-admin-theme="light"]) :is(:global(.text-violet-700), :global(.text-indigo-700), :global(.text-purple-700), :global(.text-blue-700)) { color: var(--ui-accent); }
+.scope:not([data-admin-theme="light"]) :is(:global(.border-slate-100), :global(.border-slate-200), :global(.border-b), :global(.border-t)) { border-color: var(--ui-line); }
+.scope:not([data-admin-theme="light"]) :global(.hover\:bg-slate-50):hover { background-color: var(--ui-soft); }
+
+.scope:not([data-admin-theme="light"]) :is(:global(.text-indigo-600), :global(.text-emerald-600), :global(.text-amber-900)) { color: var(--ui-accent); }

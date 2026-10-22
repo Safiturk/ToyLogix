@@ -11,6 +11,7 @@ import {
   type Account,
 } from "@/lib/account";
 import s from "../admin/product-form.module.css";
+import ui from "./account.module.css";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function AccountPage() {
       } catch {
         if (active)
           setMessage(
-            "Datele contului nu pot fi încărcate. Reîncarcă pagina sau contactează administratorul.",
+            "Datele contului nu pot fi incarcate. Reincarca pagina sau contacteaza administratorul.",
           );
       }
     })();
@@ -94,7 +95,7 @@ export default function AccountPage() {
       setMessage("Datele au fost salvate cu succes.");
     } catch {
       setMessage(
-        "Salvarea nu a reușit. Verifică datele și conexiunea, apoi încearcă din nou.",
+        "Salvarea nu a reusit. Verifica datele si conexiunea, apoi incearca din nou.",
       );
     } finally {
       setBusy(false);
@@ -103,26 +104,17 @@ export default function AccountPage() {
   return (
     <main className="min-h-screen bg-[#fcfbfe] p-4 md:p-8 text-[#24213b]">
       <div className="max-w-4xl mx-auto space-y-6">
-        <nav className="flex flex-wrap items-center justify-between gap-4 text-sm">
-          <Link href="/store">← ToyLogix / Catalog</Link>
-          {profile?.status === "approved" && <Link href="/store/orders">Comenzile mele</Link>}
-          <div className="flex items-center gap-5">
+        <nav className={ui.navigation} aria-label="Navigare cont">
+          <Link className={ui.back} href="/store">← Inapoi la catalog</Link>
+          <div className={ui.actions}>
+            {profile?.status === "approved" && <Link className={ui.action} href="/store/orders">Comenzile mele →</Link>}
             {profile?.rol === "admin" && profile.status === "approved" && (
-              <>
-                <Link href="/account/security">Securitate / 2FA</Link>
-                <Link href="/admin">Admin Panel</Link>
-              </>
+              <Link className={ui.action} href="/account/security">Siguranta contului</Link>
             )}
-            <button
-              type="button"
-              className="cursor-pointer text-slate-600 hover:text-violet-700"
-              onClick={async () => {
-                await signOutAccount();
-                router.replace("/login");
-              }}
-            >
-              Ieșire
-            </button>
+            <button type="button" className={ui.action} onClick={async () => {
+              await signOutAccount();
+              router.replace("/login");
+            }}>Iesire din cont</button>
           </div>
         </nav>
         <section className={s.card}>
@@ -130,10 +122,10 @@ export default function AccountPage() {
             <div>
               <p className={s.eyebrow}>CONTUL MEU</p>
               <h1 className="text-2xl font-semibold">
-                Profil și date de facturare
+                Profil si date de facturare
               </h1>
               <p className={s.subtitle}>
-                Datele tale de contact, companie și livrare.
+                Datele tale de contact, companie si livrare.
               </p>
             </div>
           </header>
@@ -147,7 +139,7 @@ export default function AccountPage() {
           )}
           {!ready ? (
             <p className="p-8" role="status">
-              {message ? "Date indisponibile." : "Se încarcă…"}
+              {message ? "Date indisponibile." : "Se incarca…"}
             </p>
           ) : (
             profile && (
@@ -155,8 +147,8 @@ export default function AccountPage() {
                 {profile.status !== "approved" && (
                   <p className="text-sm text-amber-800">
                     {profile.status === "pending"
-                      ? "Contul așteaptă aprobarea echipei. Între timp, poți completa datele pentru facturare."
-                      : "Accesul la catalog nu este aprobat. Contactează echipa ToyLogix."}
+                      ? "Contul asteapta aprobarea echipei. Intre timp, poti completa datele pentru facturare."
+                      : "Accesul la catalog nu este aprobat. Contacteaza echipa ToyLogix."}
                   </p>
                 )}
                 <div className={s.sectionTitle}>
@@ -169,9 +161,9 @@ export default function AccountPage() {
                         <label className="block" htmlFor={key}>
                           {
                             {
-                              nume_complet: "Nume și prenume",
+                              nume_complet: "Nume si prenume",
                               telefon: "Telefon",
-                              nume_firma: "Nume firmă",
+                              nume_firma: "Nume firma",
                             }[key]
                           }
                         </label>
@@ -200,12 +192,12 @@ export default function AccountPage() {
                       readOnly
                     />
                     <p className="text-xs text-slate-500 mt-2">
-                      Adresa verificată a contului.
+                      Adresa verificata a contului.
                     </p>
                   </div>
                 </div>
                 <div className={s.sectionTitle}>
-                  <h2>Facturare și livrare</h2>
+                  <h2>Facturare si livrare</h2>
                 </div>
                 <div className="grid gap-6 md:grid-cols-2">
                   {billingFields.map(([key, label]) => (
@@ -237,17 +229,17 @@ export default function AccountPage() {
                       })
                     }
                   />
-                  Plătitor de TVA
+                  Platitor de TVA
                 </label>
                 <div className={s.footer}>
                   <Link
                     href="/forgot-password"
                     className="text-sm text-violet-700"
                   >
-                    Schimbă parola
+                    Schimba parola
                   </Link>
                   <button className={s.saveButton} disabled={busy}>
-                    {busy ? "Se salvează…" : "Salvează datele"}
+                    {busy ? "Se salveaza…" : "Salveaza datele"}
                   </button>
                 </div>
               </form>

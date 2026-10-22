@@ -52,7 +52,7 @@ export function createAuthHandler(
     try {
       const origin = new URL(options.siteUrl).origin;
       if (request.headers.get("origin") !== origin)
-        return authJson({ error: "Origine nepermisă." }, 403);
+        return authJson({ error: "Origine nepermisa." }, 403);
       if (!request.headers.get("content-type")?.includes("application/json"))
         return authJson({ error: "Format invalid." }, 415);
       if (Number(request.headers.get("content-length")) > 8192)
@@ -64,10 +64,10 @@ export function createAuthHandler(
       try {
         body = JSON.parse(raw);
       } catch {
-        return authJson({ error: "Cerere invalidă." }, 400);
+        return authJson({ error: "Cerere invalida." }, 400);
       }
       if (!body || Array.isArray(body) || typeof body !== "object")
-        return authJson({ error: "Cerere invalidă." }, 400);
+        return authJson({ error: "Cerere invalida." }, 400);
       // Netlify replaces this header at its edge. Never trust arbitrary X-Forwarded-For.
       const ip = options.netlify
         ? request.headers.get("x-nf-client-connection-ip") || "unknown"
@@ -80,14 +80,14 @@ export function createAuthHandler(
       );
       if (!ipLimit.allowed)
         return authJson(
-          { error: "Prea multe încercări. Încercați mai târziu." },
+          { error: "Prea multe incercari. Incercati mai tarziu." },
           429,
           ipLimit.retryAfter,
         );
       const email =
         typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
       if (email.length > 254 || !isEmailAddress(email))
-        return authJson({ error: "Adresa de email nu este validă." }, 400);
+        return authJson({ error: "Adresa de email nu este valida." }, 400);
       const emailLimit = await backend.limit(
         `${action}:email:${email}`,
         limits.email,
@@ -95,7 +95,7 @@ export function createAuthHandler(
       );
       if (!emailLimit.allowed)
         return authJson(
-          { error: "Prea multe încercări. Încercați mai târziu." },
+          { error: "Prea multe incercari. Incercati mai tarziu." },
           429,
           emailLimit.retryAfter,
         );
@@ -105,7 +105,7 @@ export function createAuthHandler(
       }
       const password = typeof body.password === "string" ? body.password : "";
       if (!password || password.length > 128)
-        return authJson({ error: "Parola nu este validă." }, 400);
+        return authJson({ error: "Parola nu este valida." }, 400);
       if (action === "login") {
         const result = await backend.login(email, password);
         if (result.error === "email_not_confirmed" || result.error === "approval_pending")
@@ -128,7 +128,7 @@ export function createAuthHandler(
         if (destination === "/login")
           return authJson(
             {
-              error: "Accesul nu este disponibil. Contactați echipa ToyLogix.",
+              error: "Accesul nu este disponibil. Contactati echipa ToyLogix.",
             },
             403,
           );
@@ -147,7 +147,7 @@ export function createAuthHandler(
         !isRomanianPhone(phone)
       )
         return authJson(
-          { error: "Verificați numele, telefonul și cerințele parolei." },
+          { error: "Verificati numele, telefonul si cerintele parolei." },
           400,
         );
       await backend.signup(
@@ -160,7 +160,7 @@ export function createAuthHandler(
     } catch {
       // No credentials, existence hints or provider internals are returned/logged.
       return authJson(
-        { error: "Serviciul nu este disponibil. Încercați mai târziu." },
+        { error: "Serviciul nu este disponibil. Incercati mai tarziu." },
         503,
       );
     }

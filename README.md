@@ -1,6 +1,6 @@
 # ToyLogix
 
-ToyLogix is a B2B toy catalog and inventory application with customer approval, stock tracking, and PDF order requests.
+ToyLogix is a B2B toy catalog and inventory application. Customers submit order requests and upload bank-transfer receipts. Administrators approve customers, review orders, confirm payments, and manage stock.
 
 ## Stack
 
@@ -28,7 +28,7 @@ The migrations extend an existing ToyLogix database; they do not provision an em
 
 ## Features and structure
 
-- `app/store`: searchable catalog, favorites, cart, and PDF order requests. Requests do not process payments or reserve stock.
+- `app/store`: searchable catalog, favorites, cart, order requests, and payment receipt uploads. Stock is deducted when an administrator confirms payment.
 - `app/admin`: customer approval, inventory, barcode scanning, stock history, and Excel exports.
 - `app/account` and `app/api`: account details, authentication, and administrator MFA.
 - `lib`: shared validation, data access, and business rules.

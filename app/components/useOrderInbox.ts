@@ -12,7 +12,7 @@ export function useOrderInbox(enabled=true) {
   if(!enabled) return;
   const {data,error}=await supabase.rpc('order_inbox');
   if(!alive.current)return;
-  if(error) setError('Notificările nu pot fi încărcate.');else{setInbox(data as OrderInbox);setError('');}
+  if(error) setError('Notificarile nu pot fi incarcate.');else{setInbox(data as OrderInbox);setError('');}
  },[enabled]);
  useEffect(()=>{
   alive.current=true;
@@ -25,7 +25,7 @@ export function useOrderInbox(enabled=true) {
   const latest=inbox?.notifications[0]?.created_at;
   if(!latest)return;
   const {error}=await supabase.rpc('mark_order_notifications_read',{p_until:latest});
-  if(error)setError('Notificările nu pot fi marcate ca citite.');else{await refresh();window.dispatchEvent(new Event('toylogix-orders'));}
+  if(error)setError('Notificarile nu pot fi marcate ca citite.');else{await refresh();window.dispatchEvent(new Event('toylogix-orders'));}
  }
  return {inbox,error,refresh,markRead};
 }

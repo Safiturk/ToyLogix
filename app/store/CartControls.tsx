@@ -26,7 +26,7 @@ function QuantityControl({ product, boxes, change, disabled = false }: {
     <div className={s.quantity} role="group" aria-label={`Cantitate: ${product.nume_produs}`}>
       <button type="button" onClick={() => change(-1)} aria-label={`Scade o cutie: ${product.nume_produs}`}>−</button>
       <output aria-live="polite" aria-atomic="true">{boxes} <small>{boxes === 1 ? "cutie" : "cutii"}</small></output>
-      <button type="button" disabled={disabled || boxes >= maxCartBoxes(product)} onClick={() => change(1)} aria-label={`Adaugă o cutie: ${product.nume_produs}`}>+</button>
+      <button type="button" disabled={disabled || boxes >= maxCartBoxes(product)} onClick={() => change(1)} aria-label={`Adauga o cutie: ${product.nume_produs}`}>+</button>
     </div>
   );
 }
@@ -42,10 +42,10 @@ export function AddToCart({ product }: { product: ProductCard }) {
         <QuantityControl product={product} boxes={boxes} disabled={!valid} change={(delta) => cart.changeBoxes(product.id, delta, product)} />
       ) : (
         <button type="button" className={s.primary} disabled={!valid || max < 1} onClick={() => cart.add(product)}>
-          Adaugă în coș
+          Adauga in cos
         </button>
       )}
-      <span role="status">{cart.error || (!valid ? "Preț sau ambalare nespecificată. Contactează ToyLogix." : max < 1 ? "Stoc insuficient pentru o cutie." : boxes >= max ? "Ai atins stocul maxim disponibil." : "")}</span>
+      <span role="status">{cart.error || (!valid ? "Pret sau ambalare nespecificata. Contacteaza ToyLogix." : max < 1 ? "Stoc insuficient pentru o cutie." : boxes >= max ? "Ai atins stocul maxim disponibil." : "")}</span>
     </div>
   );
 }
@@ -54,7 +54,7 @@ export function CartLink() {
   return (
     <div className={s.banner}>
       <div className={s.bannerInner}>
-        <span>Cerere de comandă B2B</span>
+        <span>Cerere de comanda B2B</span>
         <CartMenu />
       </div>
     </div>
@@ -97,8 +97,8 @@ export function CartMenu() {
     <>
       <button ref={trigger} type="button" popoverTarget={id} onClick={positionPanel}
         className={s.cartLink} aria-expanded={open} aria-controls={id}
-        aria-label={`Coșul meu: ${boxes} ${boxes === 1 ? "cutie" : "cutii"}`}>
-        <CartIcon /> Coșul meu <b className={s.badge} aria-live="polite" aria-atomic="true">{boxes}</b>
+        aria-label={`Cosul meu: ${boxes} ${boxes === 1 ? "cutie" : "cutii"}`}>
+        <CartIcon /> Cosul meu <b className={s.badge} aria-live="polite" aria-atomic="true">{boxes}</b>
       </button>
       <div ref={panel} id={id} popover="auto" className={s.cartPopover}
         onToggle={(event) => setOpen(event.newState === "open")}>
@@ -114,9 +114,9 @@ function MiniCart({ titleId }: { titleId: string }) {
   return (
     <aside className={s.miniCart} aria-labelledby={titleId}>
       <div className={s.miniHeading}>
-        <CartIcon /><h2 id={titleId}>Coșul meu</h2><b className={s.badge}>{total.boxes}</b>
+        <CartIcon /><h2 id={titleId}>Cosul meu</h2><b className={s.badge}>{total.boxes}</b>
       </div>
-      <p className={s.miniCaption}>Totul pregătit pentru următorul pas.</p>
+      <p className={s.miniCaption}>Totul pregatit pentru urmatorul pas.</p>
       {cart.lines.length ? (
         <ul className={s.miniLines}>
           {cart.lines.map((line) => (
@@ -132,13 +132,13 @@ function MiniCart({ titleId }: { titleId: string }) {
           ))}
         </ul>
       ) : (
-        <div className={s.miniEmpty}><CartIcon /><strong>Coșul tău este gol</strong><p>Adaugă produse din catalog pentru a pregăti cererea de comandă.</p></div>
+        <div className={s.miniEmpty}><CartIcon /><strong>Cosul tau este gol</strong><p>Adauga produse din catalog pentru a pregati cererea de comanda.</p></div>
       )}
       <div className={s.miniSummary}>
         <p><span>Total cutii</span><strong>{total.boxes}</strong></p>
         <p><span>Total estimativ</span><strong>{money(total.cents)}</strong></p>
-        {cart.lines.length ? <Link className={s.checkout} href="/store/cart">Finalizează comanda <span aria-hidden="true">→</span></Link> : <button className={s.checkout} disabled>Finalizează comanda</button>}
-        <small>Prețurile și disponibilitatea se confirmă de ToyLogix.</small>
+        {cart.lines.length ? <Link className={s.checkout} href="/store/cart">Finalizeaza comanda <span aria-hidden="true">→</span></Link> : <button className={s.checkout} disabled>Finalizeaza comanda</button>}
+        <small>Preturile si disponibilitatea se confirma de ToyLogix.</small>
         {cart.error && <p role="alert">{cart.error}</p>}
       </div>
     </aside>

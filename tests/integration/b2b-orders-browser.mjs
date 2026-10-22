@@ -18,7 +18,7 @@ const ref = new URL(supabaseUrl).hostname.split(".")[0];
 const account = {
   id: 98765,
   auth_user_id: "00000000-0000-4000-8000-000000000001",
-  nume_complet: "Ștefan Țurcanu",
+  nume_complet: "Stefan Turcanu",
   email: "cont@example.ro",
   telefon: "0700123456",
   nume_firma: "Toy Test SRL",
@@ -27,30 +27,30 @@ const account = {
   is_active: true,
 };
 const billing = {
-  legal_name: "Compania Știință SRL",
+  legal_name: "Compania Stiinta SRL",
   tax_number: "RO12345",
   trade_register: "J40/123/2026",
-  address_line1: "Strada Jucăriilor 25",
-  city: "Iași",
-  region: "Iași",
-  country: "România",
+  address_line1: "Strada Jucariilor 25",
+  city: "Iasi",
+  region: "Iasi",
+  country: "Romania",
   postal_code: "700000",
-  delivery_address: "Depozit Brașov, Strada Lungă 42",
+  delivery_address: "Depozit Brasov, Strada Lunga 42",
   billing_email: "facturi@example.ro",
 };
 const products = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
-  nume_produs: `Jucărie educativă ${i + 1} - Știință și imaginație`,
+  nume_produs: `Jucarie educativa ${i + 1} - Stiinta si imaginatie`,
   cod_bara: `594123456${String(i).padStart(4, "0")}`,
   bucati_per_cutie: 12,
   pret_engros: 19.99,
   pret_retail: 29.99,
   stoc_actual: 10000,
-  categorie: "Jucării",
+  categorie: "Jucarii",
   brand: "ToyLogix",
   varsta_recomandata: "3+",
   material: "Lemn",
-  descriere: "Jucărie pentru copii",
+  descriere: "Jucarie pentru copii",
   imagini: [],
 }));
 const lines = products.map((product) => ({ product, boxes: 50 }));
@@ -115,7 +115,7 @@ await context.route(`${supabaseUrl}/**`, async (route) => {
     body =
       Number(url.searchParams.get("offset")) > 0
         ? []
-        : [{ field: "categorie", value: "Jucării" }];
+        : [{ field: "categorie", value: "Jucarii" }];
   await route.fulfill({
     json: body,
     headers: {
@@ -170,32 +170,32 @@ await context.route(baseUrl+'/api/orders/notifications',route=>route.fulfill({js
 const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try {
  await page.goto(baseUrl+'/store/cart');
- await page.getByRole('button',{name:'Trimite cererea de comandă',exact:true}).click();
+ await page.getByRole('button',{name:'Trimite cererea de comanda',exact:true}).click();
  await page.waitForURL('**/store/orders?order=*');
- await page.getByRole('heading',{name:'Cerere înregistrată · TLX-2026-0042'}).waitFor();
+ await page.getByRole('heading',{name:'Cerere inregistrata · TLX-2026-0042'}).waitFor();
  assert.ok(await page.getByText('RO49 BTRL 0000 1234 5678 9001',{exact:true}).isVisible());
  await page.getByRole('heading',{name:'Istoricul comenzii',exact:true}).waitFor();
  await page.locator('input[type=file]').setInputFiles({name:'receipt.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.7 test')});
- await page.getByText('Dovada a fost încărcată.',{exact:false}).waitFor();
- assert.ok(await page.getByText('Plată în curs de verificare',{exact:true}).first().isVisible());
+ await page.getByText('Dovada a fost incarcata.',{exact:false}).waitFor();
+ assert.ok(await page.getByText('Plata in curs de verificare',{exact:true}).first().isVisible());
  await mkdir('tmp/pdfs',{recursive:true});await page.screenshot({path:'tmp/pdfs/b2b-order-mobile.png',fullPage:true});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
  account.rol='admin';
  await page.goto(baseUrl+'/admin/orders');
  await page.getByRole('button',{name:'TLX-2026-0042',exact:true}).click();
- const proof=page.getByRole('region',{name:'Dovada plății',exact:true});
- await proof.getByText('Document încărcat',{exact:true}).waitFor();
- await proof.getByRole('link',{name:'Deschide documentul într-o filă nouă ↗',exact:true}).waitFor();
- assert.ok(await proof.locator('iframe[title="Previzualizare dovada plății PDF"]').isVisible());
+ const proof=page.getByRole('region',{name:'Dovada platii',exact:true});
+ await proof.getByText('Document incarcat',{exact:true}).waitFor();
+ await proof.getByRole('link',{name:'Deschide documentul intr-o fila noua ↗',exact:true}).waitFor();
+ assert.ok(await proof.locator('iframe[title="Previzualizare dovada platii PDF"]').isVisible());
  assert.ok(await proof.getByRole('link').getAttribute('href').then(href=>href.includes('/storage/v1/object/sign/order-receipts/')));
  const opened=page.waitForEvent('popup');await proof.getByRole('link').click();const receiptPage=await opened;await receiptPage.waitForLoadState();assert.ok(receiptPage.url().includes('/order-receipts/'));await receiptPage.close();
- await page.getByRole('button',{name:'Confirmă plata',exact:true}).click();
- await page.getByText('Starea comenzii a fost actualizată.',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'Confirma plata',exact:true}).click();
+ await page.getByText('Starea comenzii a fost actualizata.',{exact:true}).waitFor();
  assert.equal(order.status,'payment_confirmed');
- assert.equal(await page.getByRole('button',{name:'Confirmă plata',exact:true}).count(),0);
- await page.getByRole('combobox',{name:'Filtrează comenzile'}).selectOption('history');
+ assert.equal(await page.getByRole('button',{name:'Confirma plata',exact:true}).count(),0);
+ await page.getByRole('combobox',{name:'Filtreaza comenzile'}).selectOption('history');
  await page.getByRole('button',{name:order.code,exact:true}).waitFor();
- assert.ok(await page.getByText('Plată confirmată',{exact:true}).first().isVisible());
+ assert.ok(await page.getByText('Plata confirmata',{exact:true}).first().isVisible());
  await page.setViewportSize({width:1280,height:900});await page.screenshot({path:'tmp/pdfs/b2b-order-admin.png',fullPage:true});
  assert.deepEqual(errors,[]);console.log('B2B checkout, optional receipt, Romanian admin actions and mobile layout passed.');
 }finally{await browser.close();}

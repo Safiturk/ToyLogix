@@ -11,9 +11,9 @@ export function maxCartBoxes(product: ProductCard) {
   return Math.min(MAX_BOXES, product.stoc_actual);
 }
 export const requestNotice =
-  "Acest document reprezintă exclusiv o cerere de comandă, nu o comandă confirmată sau o dovadă de plată. Confirmarea finală, disponibilitatea, prețurile și informațiile de plată vor fi verificate separat de ToyLogix.";
+  "Acest document reprezinta exclusiv o cerere de comanda, nu o comanda confirmata sau o dovada de plata. Confirmarea finala, disponibilitatea, preturile si informatiile de plata vor fi verificate separat de ToyLogix.";
 export const paymentNote =
-  "Plata confirmată, comanda este pregătită pentru livrare.";
+  "Plata confirmata, comanda este pregatita pentru livrare.";
 export const specified = (value?: string | null) =>
   value?.trim() || "Nespecificat";
 export const money = (cents: number) =>
@@ -90,23 +90,23 @@ export function companyDetails(account: Account, billing: Billing) {
       specified(billing.legal_name?.trim() || account.nume_firma),
     ],
     ["Cod fiscal / CUI", specified(billing.tax_number)],
-    ["Registrul Comerțului", specified(billing.trade_register)],
-    ["Adresă de facturare", specified(address)],
+    ["Registrul Comertului", specified(billing.trade_register)],
+    ["Adresa de facturare", specified(address)],
     // The account form explicitly defines delivery_address as an override when different.
     [
-      "Adresă de livrare",
+      "Adresa de livrare",
       specified(billing.delivery_address?.trim() || address),
     ],
     ["Telefon", specified(account.telefon)],
     ["E-mail", specified(billing.billing_email?.trim() || account.email)],
-    ["Persoană de contact", specified(account.nume_complet)],
+    ["Persoana de contact", specified(account.nume_complet)],
   ];
 }
 export function emailMessage(company: string, lines: CartLine[]) {
   const totals = cartTotals(lines);
   return {
-    subject: `Cerere de comandă ToyLogix - ${company}`,
-    body: `Bună ziua,\n\nVă transmit cererea de comandă pentru ${company}.\n\n${lines.map((l) => `${l.product.nume_produs}: ${l.boxes} cutii × ${l.product.bucati_per_cutie} buc. = ${lineTotals(l).quantity} buc.; ${money(lineTotals(l).cents)}`).join("\n")}\n\nTotal cutii: ${totals.boxes}\nTotal bucăți: ${totals.quantity}\nTotal general estimativ: ${money(totals.cents)}\n\nVoi atașa PDF-ul cererii la acest e-mail.\n${requestNotice}\n\nVă rog să confirmați cererea și detaliile de plată.\nVă mulțumesc!`,
+    subject: `Cerere de comanda ToyLogix - ${company}`,
+    body: `Buna ziua,\n\nVa transmit cererea de comanda pentru ${company}.\n\n${lines.map((l) => `${l.product.nume_produs}: ${l.boxes} cutii × ${l.product.bucati_per_cutie} buc. = ${lineTotals(l).quantity} buc.; ${money(lineTotals(l).cents)}`).join("\n")}\n\nTotal cutii: ${totals.boxes}\nTotal bucati: ${totals.quantity}\nTotal general estimativ: ${money(totals.cents)}\n\nVoi atasa PDF-ul cererii la acest e-mail.\n${requestNotice}\n\nVa rog sa confirmati cererea si detaliile de plata.\nVa multumesc!`,
   };
 }
 export function mailtoLink(

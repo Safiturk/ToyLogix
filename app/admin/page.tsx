@@ -5,8 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import BarcodeScanner from "../components/BarcodeScanner";
 import formStyles from "./product-form.module.css";
+import OrderNotifications from "@/app/components/OrderNotifications";
 import OnlinePanel from "./OnlinePanel";
 import wings from "./wings.module.css";
 import dashboard from "./dashboard.module.css";
@@ -24,7 +24,6 @@ import ProductInventory from "./ProductInventory";
 import StockManagement from "./StockManagement";
 import AuditHistory from "./AuditHistory";
 import OrderOverview from "./OrderOverview";
-import OrderNotifications from "@/app/components/OrderNotifications";
 import { authPost } from "@/lib/auth-client";
 import { archiveProduct as setProductArchived, recordStockMovement } from "@/lib/stock";
 import { productMetadata, stockError } from "@/lib/stock-rules";
@@ -48,7 +47,8 @@ const DEFAULT_CATEGORIES = [
 
 function SimplePagination({ page, count, size, change, label }: { page: number; count: number; size: number; change: (page: number) => void; label: string }) {
   const last = Math.max(1, Math.ceil(count/size));
-  return <nav aria-label={label} className="flex gap-4"><span>{label}: {count}</span><button disabled={page===1} onClick={() => change(page-1)}>Înapoi</button><span>{page} / {last}</span><button disabled={page>=last} onClick={() => change(page+1)}>Înainte</button></nav>;
+  if (last <= 1) return null;
+  return <nav aria-label={label} className={dashboard.pagination}><span>{label}: {count}</span><button disabled={page===1} onClick={() => change(page-1)}>Inapoi</button><span>{page} / {last}</span><button disabled={page>=last} onClick={() => change(page+1)}>Inainte</button></nav>;
 }
 
 export default function AdminDashboard() {
@@ -64,6 +64,7 @@ export default function AdminDashboard() {
   const [pendingPage, setPendingPage] = useState(1);
   const [accountCount, setAccountCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [accountsReady, setAccountsReady] = useState(false);
   const [accountVersion, setAccountVersion] = useState(0);
   const [accountError, setAccountError] = useState("");
   const [inventoryVersion, setInventoryVersion] = useState(0);
@@ -79,7 +80,6 @@ export default function AdminDashboard() {
   const [originalImages, setOriginalImages] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState<AdminAccount | null>(null);
   const [detailUser, setDetailUser] = useState<AdminAccount | null>(null);
-  const [showScanner, setShowScanner] = useState(false);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
 
   const [isUserTableOpen, setIsUserTableOpen] = useState(false);
@@ -126,7 +126,7 @@ export default function AdminDashboard() {
       if (!controller.signal.aborted) {
         setStats(null);
         setCriticalProducts([]);
-        setProductLoadError("Inventarul nu poate fi încărcat.");
+        setProductLoadError("Inventarul nu poate fi incarcat.");
       }
     }).finally(() => { if (!controller.signal.aborted) setInventoryLoading(false); });
     return () => controller.abort();
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
       if (controller.signal.aborted) return;
       setFacets({ categorie: options[0], brand: options[1], material: options[2], varsta_recomandata: options[3] });
       setFacetError("");
-    }).catch(() => { if (!controller.signal.aborted) setFacetError("Sugestiile pentru produse nu pot fi încărcate."); });
+    }).catch(() => { if (!controller.signal.aborted) setFacetError("Sugestiile pentru produse nu pot fi incarcate."); });
     return () => controller.abort();
   }, [currentUser, inventoryVersion]);
 
@@ -156,10 +156,10 @@ export default function AdminDashboard() {
       if (controller.signal.aborted) return;
       if (registered.error || pending.error) throw registered.error || pending.error;
       setAccounts(registered.data ?? []); setAccountCount(registered.count ?? 0);
-      setPendingUsers(pending.data ?? []); setPendingCount(pending.count ?? 0); setAccountError("");
+      setPendingUsers(pending.data ?? []); setPendingCount(pending.count ?? 0); setAccountError(""); setAccountsReady(true);
       setAccountPage((page) => Math.min(page, Math.max(1, Math.ceil((registered.count ?? 0)/24))));
       setPendingPage((page) => Math.min(page, Math.max(1, Math.ceil((pending.count ?? 0)/12))));
-    }).catch(() => { if (!controller.signal.aborted) setAccountError("Conturile nu pot fi încărcate."); });
+    }).catch(() => { if (!controller.signal.aborted) setAccountError("Conturile nu pot fi incarcate."); });
     return () => controller.abort();
   }, [currentUser, accountVersion, accountPage, pendingPage]);
 
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
       .single();
     if (error) {
       alert(
-        "Modificarea nu a fost salvată. Verifică permisiunile și conexiunea.",
+        "Modificarea nu a fost salvata. Verifica permisiunile si conexiunea.",
       );
       return;
     }
@@ -204,11 +204,11 @@ export default function AdminDashboard() {
     const prompt =
       action === "access"
         ? user.is_active
-          ? "Închizi accesul? Datele sunt păstrate; accesul poate fi redeschis."
-          : "Redeschizi accesul? Rolul și aprobarea rămân neschimbate."
+          ? "Inchizi accesul? Datele sunt pastrate; accesul poate fi redeschis."
+          : "Redeschizi accesul? Rolul si aprobarea raman neschimbate."
         : action === "profile"
-          ? "Ștergi profilul? Accesul este oprit. Contul de autentificare, facturarea și istoricul sunt păstrate."
-          : "Ștergi definitiv contul de autentificare și profilul? Datele de facturare vor fi eliminate. Istoricul protejat poate împiedica ștergerea.";
+          ? "Stergi profilul? Accesul este oprit. Contul de autentificare, facturarea si istoricul sunt pastrate."
+          : "Stergi definitiv contul de autentificare si profilul? Datele de facturare vor fi eliminate. Istoricul protejat poate impiedica stergerea.";
     if (!confirm(user.email + "\n" + prompt)) return;
     setAccountBusy(true);
     try {
@@ -234,7 +234,7 @@ export default function AdminDashboard() {
       alert(
         error instanceof Error
           ? error.message
-          : "Operațiunea nu a reușit. Verifică accesul și conexiunea.",
+          : "Operatiunea nu a reusit. Verifica accesul si conexiunea.",
       );
       await refreshAccounts();
     } finally {
@@ -244,7 +244,7 @@ export default function AdminDashboard() {
 
   const toggleAccountRole = async (user: AdminAccount) => {
     if (currentUser && currentUser.email === user.email) {
-      alert("Nu vă puteți schimba propriul rol!");
+      alert("Nu va puteti schimba propriul rol!");
       return;
     }
 
@@ -261,7 +261,7 @@ export default function AdminDashboard() {
       );
       return;
     }
-    alert(`Rolul utilizatorului a fost schimbat în: ${newRole.toUpperCase()}`);
+    alert(`Rolul utilizatorului a fost schimbat in: ${newRole.toUpperCase()}`);
     refreshAccounts();
   };
 
@@ -279,7 +279,7 @@ export default function AdminDashboard() {
     if (files.length + (form.imagini?.length ?? 0) > 10) { alert("Maximum 10 imagini per produs."); return; }
     setUploadingImages(true);
     try { for (const file of files) appendProductImage(await uploadProductImage(file)); }
-    catch (error) { alert(error instanceof Error ? error.message : "Încărcarea a eșuat."); }
+    catch (error) { alert(error instanceof Error ? error.message : "Incarcarea a esuat."); }
     finally { setUploadingImages(false); }
   };
 
@@ -308,7 +308,7 @@ export default function AdminDashboard() {
         .single()
         .overrideTypes<InventoryProduct, { merge: false }>();
       if (error || !data) {
-        alert("Produsul nu poate fi încărcat pentru editare.");
+        alert("Produsul nu poate fi incarcat pentru editare.");
         return;
       }
       setEditingId(data.id || null);
@@ -321,7 +321,7 @@ export default function AdminDashboard() {
       });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
-      alert("Produsul nu poate fi încărcat pentru editare.");
+      alert("Produsul nu poate fi incarcat pentru editare.");
     }
   };
 
@@ -353,14 +353,14 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (savingProduct || uploadingImages) return;
     if (!Number.isSafeInteger(form.stoc_actual) || form.stoc_actual < 0 || form.stoc_actual > 2147483647) {
-      alert("Stocul trebuie să fie un număr întreg între 0 și 2147483647.");
+      alert("Stocul trebuie sa fie un numar intreg intre 0 si 2147483647.");
       return;
     }
     // Existing products can still contain legacy image URLs or embedded images.
     // Only newly added images must satisfy the current Storage upload policy.
     if (form.imagini?.some((image) =>
       !(editingId && originalImages.includes(image)) && !isProductImageUrl(image)
-    )) { alert("Încărcați imaginile noi în Storage înainte de salvare."); return; }
+    )) { alert("Incarcati imaginile noi in Storage inainte de salvare."); return; }
     setSavingProduct(true);
     try {
       const metadata = productMetadata({ ...form });
@@ -384,7 +384,7 @@ export default function AdminDashboard() {
             type: "stock_in",
             amount: form.stoc_actual,
             currentStock: 0,
-            reason: "Stoc inițial la adăugarea produsului",
+            reason: "Stoc initial la adaugarea produsului",
           });
         } catch (stockFailure) {
           // The product exists even if the separate stock request fails.
@@ -392,7 +392,7 @@ export default function AdminDashboard() {
           cancelEdit();
           await refreshProducts();
           showStockHistory(data.id);
-          alert("Produsul a fost creat, dar stocul inițial nu a fost confirmat. Verifică istoricul înainte de a înregistra o nouă intrare. " + stockError(stockFailure));
+          alert("Produsul a fost creat, dar stocul initial nu a fost confirmat. Verifica istoricul inainte de a inregistra o noua intrare. " + stockError(stockFailure));
           return;
         }
       }
@@ -418,7 +418,7 @@ export default function AdminDashboard() {
         return createInventoryReport(products);
       });
     } catch {
-      alert("Raportul Excel nu a putut fi creat. Încercați din nou.");
+      alert("Raportul Excel nu a putut fi creat. Incercati din nou.");
     } finally {
       setExporting(false);
     }
@@ -427,7 +427,7 @@ export default function AdminDashboard() {
   const allCategoryOptions = Array.from(new Set([...DEFAULT_CATEGORIES, ...facets.categorie]));
   const existingBrandOptions = facets.brand;
   const registeredUsers = accounts;
-  const statsPlaceholder = inventoryLoading ? "Se încarcă…" : "Indisponibil";
+  const statsPlaceholder = inventoryLoading ? "Se incarca…" : "Indisponibil";
   const formatRON = (amount: number) => {
     return new Intl.NumberFormat("ro-RO", {
       minimumFractionDigits: 0,
@@ -459,7 +459,7 @@ export default function AdminDashboard() {
                 disabled={exporting || !currentUser}
                 className={dashboard.action}
               >
-                {exporting ? "Se pregătește…" : "📊 Raport Excel"}
+                {exporting ? "Se pregateste…" : "📊 Raport Excel"}
               </button>
               <Link
                 href="/store"
@@ -474,7 +474,7 @@ export default function AdminDashboard() {
                 }}
                 className={`${dashboard.action} ${dashboard.exit}`}
               >
-                Ieșire Admin
+                Iesire Admin
               </button>
             </div>
           </header>
@@ -493,7 +493,7 @@ export default function AdminDashboard() {
 
             <div className={dashboard.stat}>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Bucăți în Stoc
+                Bucati in Stoc
               </span>
               <div className="text-2xl font-black text-indigo-600">
                 {stats && !inventoryLoading ? `${formatRON(stats.stock)} buc` : statsPlaceholder}
@@ -533,12 +533,12 @@ export default function AdminDashboard() {
           {productLoadError && (
             <p role="alert">
               {productLoadError}{" "}
-              <button onClick={refreshProducts}>Reîncarcă</button>
+              <button onClick={refreshProducts}>Reincarca</button>
             </p>
           )}
-          <section id="critical-stock" className={dashboard.section}>
-            <h2 className="text-xl font-bold">Produse cu stoc critic</h2>
-            {inventoryLoading ? <p role="status">Se încarcă…</p> : productLoadError ? <p>Stocul critic nu poate fi afișat.</p> : criticalStockProducts.length ? (
+          <section id="critical-stock" className={`${dashboard.section} ${dashboard.stockSummary} ${!inventoryLoading && !productLoadError && !criticalStockProducts.length ? dashboard.stockHealthy : ""}`}>
+            <h2>{!inventoryLoading && !productLoadError && !criticalStockProducts.length ? "✓ Stocuri suficiente" : "Produse cu stoc critic"}</h2>
+            {inventoryLoading ? <p role="status">Se incarca…</p> : productLoadError ? <p>Stocul critic nu poate fi afisat.</p> : criticalStockProducts.length ? (
               <ul className="mt-3 space-y-2">
                 {criticalStockProducts.map((product) => (
                   <li key={product.id}>
@@ -548,25 +548,24 @@ export default function AdminDashboard() {
                     >
                       {product.nume_produs} — {product.stoc_actual} cutii (prag:{" "}
                       {product.critical_stock_level ?? product.stoc_critic}) ·
-                      Detalii și istoric
+                      Detalii si istoric
                     </button>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p>Nu există produse cu stoc critic.</p>
+              <p>Niciun produs nu este sub pragul de stoc critic.</p>
             )}
+            {stats && !inventoryLoading && <SimplePagination page={criticalPage} count={stats.critical} size={12} change={changeCriticalPage} label="Stoc critic" />}
           </section>
 
-          {stats && !inventoryLoading && <SimplePagination page={criticalPage} count={stats.critical} size={12} change={changeCriticalPage} label="Stoc critic" />}
-          {facetError && <p role="alert">{facetError} <button onClick={refreshProducts}>Reîncarcă</button></p>}
-          {accountError && <p role="alert">{accountError} <button onClick={refreshAccounts}>Reîncearcă</button></p>}
-          <SimplePagination page={pendingPage} count={pendingCount} size={12} change={setPendingPage} label="Solicitări" />
-          <SimplePagination page={accountPage} count={accountCount} size={24} change={setAccountPage} label="Conturi" />
+          {accountsReady && !accountError && pendingCount === 0 && <div className={dashboard.quietStatus}><span aria-hidden="true">✓</span> Nicio solicitare de inregistrare in asteptare.</div>}
+          {facetError && <p role="alert">{facetError} <button onClick={refreshProducts}>Reincarca</button></p>}
+          {accountError && <p role="alert">{accountError} <button onClick={refreshAccounts}>Reincearca</button></p>}
           {pendingUsers.length > 0 && (
             <section className={`${dashboard.section} ${dashboard.pending}`}>
               <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2">
-                ⏳ Solicitări Înregistrare Noi ({pendingCount})
+                ⏳ Solicitari Inregistrare Noi ({pendingCount})
               </h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs bg-white rounded-2xl overflow-hidden shadow-sm">
@@ -576,7 +575,7 @@ export default function AdminDashboard() {
                       <th className="p-3">Telefon</th>
                       <th className="p-3">Email</th>
                       <th className="p-3">Firma</th>
-                      <th className="p-3">Acțiuni</th>
+                      <th className="p-3">Actiuni</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -600,14 +599,14 @@ export default function AdminDashboard() {
                             onClick={() => void accountAction(u, "access")}
                           >
                             {u.is_active
-                              ? "Închide accesul"
+                              ? "Inchide accesul"
                               : "Redeschide accesul"}
                           </button>
                           <button
                             disabled={currentUser?.id === u.id || accountBusy}
                             onClick={() => void accountAction(u, "profile")}
                           >
-                            Șterge profilul
+                            Sterge profilul
                           </button>
                           {u.status === "rejected" && (
                             <button
@@ -616,7 +615,7 @@ export default function AdminDashboard() {
                                 void updateAccountStatus(u.id, "approved")
                               }
                             >
-                              Aprobă
+                              Aproba
                             </button>
                           )}
                           <button
@@ -625,7 +624,7 @@ export default function AdminDashboard() {
                             }
                             className="px-3 py-1 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition"
                           >
-                            ✓ Aprobă
+                            ✓ Aproba
                           </button>
                           <button
                             onClick={() =>
@@ -641,6 +640,7 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+              <SimplePagination page={pendingPage} count={pendingCount} size={12} change={setPendingPage} label="Solicitari" />
             </section>
           )}
 
@@ -652,7 +652,7 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-3">
                 <span className="text-xl">👥</span>
                 <h2 className="text-xl font-bold text-slate-800">
-                  Utilizatori Înregistrați{" "}
+                  Utilizatori Inregistrati{" "}
                   <span className="text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-xl font-extrabold ml-1">
                     ({accountCount})
                   </span>
@@ -678,7 +678,7 @@ export default function AdminDashboard() {
                         <th className="p-3">Contact</th>
                         <th className="p-3">Firma</th>
                         <th className="p-3">Rol</th>
-                        <th className="p-3">Acțiuni</th>
+                        <th className="p-3">Actiuni</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -716,7 +716,7 @@ export default function AdminDashboard() {
                                 }`}
                               >
                                 {u.rol.toUpperCase()} / {u.status}
-                                {!u.is_active && " / Acces închis"}
+                                {!u.is_active && " / Acces inchis"}
                               </span>
                             </td>
                             <td className="p-3 flex gap-2">
@@ -732,8 +732,8 @@ export default function AdminDashboard() {
                                 }`}
                               >
                                 {u.rol === "admin"
-                                  ? "Schimbă în User"
-                                  : "Schimbă în Admin"}
+                                  ? "Schimba in User"
+                                  : "Schimba in Admin"}
                               </button>
                               <button
                                 disabled={isSelf}
@@ -744,7 +744,7 @@ export default function AdminDashboard() {
                                     : "bg-rose-100 hover:bg-rose-200 text-rose-700"
                                 }`}
                               >
-                                Șterge contul
+                                Sterge contul
                               </button>
                             </td>
                           </tr>
@@ -753,6 +753,7 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
+                <SimplePagination page={accountPage} count={accountCount} size={24} change={setAccountPage} label="Conturi" />
               </div>
             )}
           </section>
@@ -764,10 +765,10 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold text-slate-800">
                   {editingId
                     ? "Editare Produs Existent"
-                    : "Adăugare Produs Nou"}
+                    : "Adaugare Produs Nou"}
                 </h2>
                 <p className={formStyles.subtitle}>
-                  Detalii, imagini și disponibilitate pentru catalogul tău.
+                  Detalii, imagini si disponibilitate pentru catalogul tau.
                 </p>
               </div>
               {editingId && (
@@ -776,7 +777,7 @@ export default function AdminDashboard() {
                   onClick={cancelEdit}
                   className="px-3 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-300 transition"
                 >
-                  Anulează Editarea
+                  Anuleaza Editarea
                 </button>
               )}
             </div>
@@ -784,7 +785,7 @@ export default function AdminDashboard() {
             <form onSubmit={saveProduct} className={formStyles.form}>
               <div className={formStyles.sectionTitle}>
                 <span>01</span>
-                <h3>Informații produs</h3>
+                <h3>Informatii produs</h3>
               </div>
               <div className={formStyles.detailsGrid}>
                 <div>
@@ -801,13 +802,6 @@ export default function AdminDashboard() {
                       }
                       className="flex-1 p-2.5 border rounded-xl font-mono text-xs outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowScanner(true)}
-                      className="px-3 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition flex items-center gap-1 shadow-sm"
-                    >
-                      Scan
-                    </button>
                   </div>
                 </div>
                 <div>
@@ -849,7 +843,7 @@ export default function AdminDashboard() {
                           </option>
                         ))}
                         <option value="__NEW__">
-                          ➕ Categorie Nouă (Yeni Ekle...)
+                          ➕ Categorie Noua (Yeni Ekle...)
                         </option>
                       </select>
                     </div>
@@ -857,7 +851,7 @@ export default function AdminDashboard() {
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Nume categorie nouă..."
+                        placeholder="Nume categorie noua..."
                         required
                         value={form.categorie}
                         onChange={(e) =>
@@ -876,7 +870,7 @@ export default function AdminDashboard() {
                         }}
                         className="px-3 py-1 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-300"
                       >
-                        Anulează
+                        Anuleaza
                       </button>
                     </div>
                   )}
@@ -886,7 +880,7 @@ export default function AdminDashboard() {
                     htmlFor="product-brand"
                     className="block text-xs font-bold mb-1"
                   >
-                    Brand (Marcă)
+                    Brand (Marca)
                   </label>
                   <input
                     id="product-brand"
@@ -897,7 +891,7 @@ export default function AdminDashboard() {
                     onChange={(e) =>
                       setForm({ ...form, brand: e.target.value })
                     }
-                    placeholder="Caută sau scrie un brand..."
+                    placeholder="Cauta sau scrie un brand..."
                     className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-medium"
                     autoComplete="off"
                   />
@@ -907,7 +901,7 @@ export default function AdminDashboard() {
                     ))}
                   </datalist>
                   <p className="mt-1 text-[10px] text-slate-500">
-                    Selectează o marcă existentă sau introdu una nouă.
+                    Selecteaza o marca existenta sau introdu una noua.
                   </p>
                 </div>
               </div>
@@ -918,7 +912,7 @@ export default function AdminDashboard() {
                     htmlFor="product-age"
                     className="block text-xs font-bold mb-1"
                   >
-                    Vârstă recomandată
+                    Varsta recomandata
                   </label>
                   <input
                     id="product-age"
@@ -932,7 +926,7 @@ export default function AdminDashboard() {
                         varsta_recomandata: e.target.value,
                       }))
                     }
-                    placeholder="Selectează sau scrie intervalul de vârstă"
+                    placeholder="Selecteaza sau scrie intervalul de varsta"
                     className="w-full"
                   />
                   <datalist id="product-age-options">
@@ -951,7 +945,7 @@ export default function AdminDashboard() {
                     ))}
                   </datalist>
                   <p className="mt-2 text-[11px] text-slate-500">
-                    Introdu vârsta indicată pe ambalajul produsului.
+                    Introdu varsta indicata pe ambalajul produsului.
                   </p>
                 </div>
                 <div>
@@ -973,7 +967,7 @@ export default function AdminDashboard() {
                         material: e.target.value,
                       }))
                     }
-                    placeholder="Selectează sau scrie materialul"
+                    placeholder="Selecteaza sau scrie materialul"
                     className="w-full"
                   />
                   <datalist id="product-material-options">
@@ -983,7 +977,7 @@ export default function AdminDashboard() {
                         "Lemn",
                         "Metal",
                         "Textil",
-                        "Pluș",
+                        "Plus",
                         "Carton",
                         "Silicon",
                         ...facets.material,
@@ -993,7 +987,7 @@ export default function AdminDashboard() {
                     ))}
                   </datalist>
                   <p className="mt-2 text-[11px] text-slate-500">
-                    Poți introduce și o combinație, de exemplu: lemn și metal.
+                    Poti introduce si o combinatie, de exemplu: lemn si metal.
                   </p>
                 </div>
               </div>
@@ -1007,7 +1001,7 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <span className="text-[11px] text-slate-500 font-medium">
-                      Încarcă imagini (JPEG, PNG, WebP · maximum 5 MB)
+                      Incarca imagini (JPEG, PNG, WebP · maximum 5 MB)
                     </span>
                     <label className="block">
                       <input
@@ -1022,11 +1016,11 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {uploadingImages && <p role="status">Se optimizează și se încarcă imaginile…</p>}
+                {uploadingImages && <p role="status">Se optimizeaza si se incarca imaginile…</p>}
                 {form.imagini && form.imagini.length > 0 && (
                   <div className="pt-2">
                     <span className="text-[11px] font-bold text-slate-600 block mb-1">
-                      Imagini atașate ({form.imagini.length}):
+                      Imagini atasate ({form.imagini.length}):
                     </span>
                     <div className="flex gap-2 overflow-x-auto pb-1">
                       {form.imagini.map((img, idx) => (
@@ -1047,7 +1041,7 @@ export default function AdminDashboard() {
                             onClick={() => removeImageFromForm(idx)}
                             className="absolute inset-0 bg-rose-600/80 text-white font-bold text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
                           >
-                            Șterge ✕
+                            Sterge ✕
                           </button>
                         </div>
                       ))}
@@ -1073,12 +1067,12 @@ export default function AdminDashboard() {
 
               <div className={formStyles.sectionTitle}>
                 <span>03</span>
-                <h3>Prețuri și stoc</h3>
+                <h3>Preturi si stoc</h3>
               </div>
               <div className={formStyles.pricingGrid}>
                 <div>
                   <label className="block text-xs font-bold text-indigo-700 mb-1">
-                    Preț En-Gros (B2B Toptan Fiyat)
+                    Pret En-Gros (B2B Toptan Fiyat)
                   </label>
                   <NumericInput
                     type="number"
@@ -1098,7 +1092,7 @@ export default function AdminDashboard() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Preț Vânzare Recomandat (RRP)
+                    Pret Vanzare Recomandat (RRP)
                   </label>
                   <NumericInput
                     type="number"
@@ -1118,7 +1112,7 @@ export default function AdminDashboard() {
 
                 <div>
                   <label className="block text-xs font-bold mb-1">
-                    Bucăți / Cutie
+                    Bucati / Cutie
                   </label>
                   <NumericInput
                     type="number"
@@ -1161,7 +1155,7 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label htmlFor="product-stock" className="block text-xs font-bold mb-1">
-                    {editingId ? "Stoc actual (cutii)" : "Stoc inițial (cutii)"}
+                    {editingId ? "Stoc actual (cutii)" : "Stoc initial (cutii)"}
                   </label>
                   <NumericInput
                     id="product-stock"
@@ -1178,14 +1172,14 @@ export default function AdminDashboard() {
                   />
                   {!editingId && (
                     <p id="product-stock-help" className="mt-2 text-xs text-slate-500">
-                      Cantitatea disponibilă se înregistrează ca intrare la salvare.
+                      Cantitatea disponibila se inregistreaza ca intrare la salvare.
                     </p>
                   )}
                 </div>
               </div>
 
               <div className={formStyles.footer}>
-                <p>Verifică informațiile înainte de salvare.</p>
+                <p>Verifica informatiile inainte de salvare.</p>
                 <button
                   type="submit"
                   disabled={savingProduct || uploadingImages}
@@ -1193,10 +1187,10 @@ export default function AdminDashboard() {
                   aria-busy={savingProduct}
                 >
                   {savingProduct
-                    ? "Se salvează..."
+                    ? "Se salveaza..."
                     : editingId
-                      ? "Actualizează Produsul (Güncelle)"
-                      : "Salvează Produsul în Sistem"}
+                      ? "Actualizeaza Produsul (Güncelle)"
+                      : "Salveaza Produsul in Sistem"}
                 </button>
               </div>
             </form>
@@ -1227,16 +1221,6 @@ export default function AdminDashboard() {
 
       {detailUser && (
         <CustomerDetails user={detailUser} close={() => setDetailUser(null)} />
-      )}
-      {showScanner && (
-        <BarcodeScanner
-          onScanSuccess={(scannedCode: string) => {
-            setForm((prev) => ({ ...prev, cod_bara: scannedCode }));
-            setShowScanner(false);
-            alert(`Cod de bare citit: ${scannedCode}`);
-          }}
-          onClose={() => setShowScanner(false)}
-        />
       )}
     </div>
   );

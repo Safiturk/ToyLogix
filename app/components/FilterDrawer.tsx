@@ -27,11 +27,11 @@ export default function FilterDrawer({
     >
       <div className={s.menuContent}>
         <header>
-          <h2 id="filter-drawer-title">Filtrează produsele</h2>
+          <h2 id="filter-drawer-title">Filtreaza produsele</h2>
           <button
             className={s.iconButton}
             onClick={close}
-            aria-label="Închide filtrele"
+            aria-label="Inchide filtrele"
           >
             ✕
           </button>

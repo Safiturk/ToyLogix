@@ -7,8 +7,8 @@ test("inventory export preserves barcode text, prices, and Romanian names", asyn
   const buffer = await createInventoryReport([{
     id: 1,
     cod_bara: "0012345678901",
-    nume_produs: "Jucărie educativă",
-    categorie: "Știință",
+    nume_produs: "Jucarie educativa",
+    categorie: "Stiinta",
     brand: "Test",
     pret_retail: 29.99,
     pret_engros: 19.99,
@@ -18,7 +18,7 @@ test("inventory export preserves barcode text, prices, and Romanian names", asyn
   await workbook.xlsx.load(buffer);
   const sheet = workbook.getWorksheet("Inventar");
   assert.equal(sheet.getCell("B2").value, "0012345678901");
-  assert.equal(sheet.getCell("C2").value, "Jucărie educativă");
+  assert.equal(sheet.getCell("C2").value, "Jucarie educativa");
   assert.equal(sheet.getCell("G2").value, 19.99);
   assert.equal(sheet.getCell("H2").value, 12);
 });

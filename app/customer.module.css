@@ -12,6 +12,7 @@
   line-height: 1.6;
   color-scheme: light;
 }
+
 .page *,
 .authPage * {
   box-sizing: border-box;
@@ -445,7 +446,12 @@
   color: var(--ink);
 }
 .search:focus-within {
-  outline: 2px solid #9377ee;
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+/* The search container supplies the focus ring for its text input. */
+.page .search input:focus-visible {
+  outline: none;
 }
 .search button {
   background: transparent;
@@ -1813,7 +1819,7 @@
   .categoryLayout { grid-template-columns: 180px minmax(0, 1fr); gap: 16px; }
   .promoLabel { display: none; }
 }
-@media (max-width: 900px) {
+@media (max-width: 1350px) {
   .headerInner { flex-wrap: wrap; gap: 12px; }
   .headerSearch { order: 3; flex-basis: 100%; }
 }
@@ -1936,12 +1942,7 @@
   }
   .mobileAccountMenu { display: block; position: relative; grid-column: 3; grid-row: 1; justify-self: end; }
   .mobileAccountTrigger { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; background: transparent; touch-action: manipulation; }
-  .mobileAccountDropdown { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: 220px; max-width: calc(100vw - 32px); padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 28px #24213b26; }
-  .mobileAccountDropdown a, .mobileAccountDropdown button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; text-align: left; }
-  .mobileAccountDropdown b { padding: 0 6px; border-radius: 8px; background: var(--line); }
-  .mobileAccountDropdown a:hover, .mobileAccountDropdown a:focus-visible, .mobileAccountDropdown button:hover, .mobileAccountDropdown button:focus-visible { background: #f0edf6; }
-  .dark .mobileAccountDropdown { background: #252030; }
-  .dark .mobileAccountDropdown a:hover, .dark .mobileAccountDropdown a:focus-visible, .dark .mobileAccountDropdown button:hover, .dark .mobileAccountDropdown button:focus-visible { background: #382c50; }
+
 }
 .favoritesTitle { font-size: 26px; font-weight: 750; margin: 5px 0; }
 .favoritesList { list-style: none; padding: 0; margin: 24px 0; display: grid; gap: 12px; }
@@ -1972,3 +1973,65 @@
 @media (max-width: 767px) {
   .page { --store-gutter: 16px; }
 }
+
+/* Petrol: one restrained gradient, quiet surfaces and neutral photography. */
+.page.petrol { --ink: #edf5f1; --muted: #a8bcb3; --purple: #43e0bb; --line: #31433a; background: #111615; color-scheme: dark; }
+.petrol .topbar { background: #091b19; color: #b3cfc7; }
+.petrol .header { background: #111a18; }
+.petrol .header, .petrol .filterSidebar, .petrol .card, .petrol .productOpen,
+.petrol .dialog, .petrol .menuDrawer, .petrol .empty, .petrol .search,
+.petrol .iconButton, .petrol .hamburger, .petrol .secondary,
+.petrol .pagination button, .petrol .pagination select, .petrol .resultRow select,
+.petrol .filterSidebar input:not([type="checkbox"]), .petrol .facetOptions select,
+.petrol .priceRange input, .petrol .mobileAccountDropdown { background: #1a211e; color: var(--ink); border-color: var(--line); }
+.petrol .header { background: #111a18; }
+.petrol .search { background: #1b2522; }
+.petrol .hero { grid-template-columns: 1fr; background: linear-gradient(118deg,#117f80 0%,#0b6363 38%,#073e3b 72%,#10211d 100%); border: 0; border-radius: 14px; }
+.petrol .heroCopy { padding: 44px 40px 32px; }
+.petrol .hero h1 { font-size: clamp(32px,4vw,56px); line-height: 1.08; color: #fff; }
+.petrol .hero h1 em { color: #b9e8dc; }
+.petrol .heroCopy>p { color: #d1e6e0; max-width: 470px; }
+.petrol .hero .eyebrow, .petrol .heroMeta { color: #c0e4db; }
+.petrol .heroArt { display: none; }
+.petrol .heroMeta { padding-top: 22px; border-top: 1px solid #ffffff26; }
+.petrol .resultRow, .petrol .filters, .petrol .pricePanel, .petrol .partner,
+.petrol .accountAvatar, .petrol .countBadge, .petrol .wishlistLink b { background: #203b30; border-color: var(--line); }
+.petrol .promoStrip { background: linear-gradient(110deg,#143d35,#182820); border-color: #335c4b; }
+.petrol .primary, .petrol .pagination button[aria-current="page"] { background: #43e0bb; color: #062e23; border-color: #43e0bb; }
+.petrol .primary:hover { background: #79efd2; border-color: #79efd2; }
+.petrol .secondary:hover, .petrol .hamburger:hover, .petrol .hamburger[aria-expanded="true"],
+.petrol .menuContent nav a:hover, .petrol .menuContent nav a[aria-current="page"],
+.petrol .detailFavorite[aria-pressed="true"], .petrol .mobileAccountDropdown a:hover,
+.petrol .mobileAccountDropdown button:hover, .petrol .mobileAccountDropdown a:focus-visible,
+.petrol .mobileAccountDropdown button:focus-visible { background: #274b3b; color: #b7f5dc; }
+.petrol .card { border-radius: 10px; box-shadow: none; }
+.petrol:not(.categoryPage) .resultRow { background: transparent; }
+.petrol .card:hover { border-color: #609c83; }
+.petrol .cardImage, .petrol .detailImage, .petrol .thumbnails button { background: #fff; color-scheme: light; }
+.petrol .noImage { background: #e9eeeb; color: #52695c; }
+.petrol .categoryTag, .petrol .favoriteButton, .petrol .cardArrow { color: #176449; background: #f0f8f3; border-color: #c9dfd2; }
+.petrol .favoriteButton[aria-pressed="true"] { color: #075f41; background: #b9f5de; }
+.petrol .skeleton { background: linear-gradient(110deg,#1c2721 30%,#304437 45%,#1c2721 60%); background-size: 200% 100%; }
+.petrol .favoriteToast { background: #b7f5dc; color: #103224; }
+.petrol .dialog::backdrop, .petrol .menuDrawer::backdrop { background: #040d0acc; }
+.petrol :focus-visible { outline-color: #84f5db; }
+.petrol .accountAvatar { color: #b7f5dc; }
+@media(max-width:767px) { .petrol .heroCopy { padding: 30px 22px; } .petrol .hero h1 { font-size: 34px; } }
+
+/* Shared account dropdown on desktop and mobile. */
+  .mobileAccountDropdown { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: 220px; max-width: calc(100vw - 32px); padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 28px #24213b26; }
+  .mobileAccountDropdown > a, .mobileAccountDropdown > button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; text-align: left; }
+  .mobileAccountDropdown b { padding: 0 6px; border-radius: 8px; background: var(--line); }
+  .mobileAccountDropdown > a:hover, .mobileAccountDropdown > a:focus-visible, .mobileAccountDropdown > button:hover, .mobileAccountDropdown > button:focus-visible { background: #f0edf6; }
+  .dark .mobileAccountDropdown { background: #252030; }
+  .dark .mobileAccountDropdown > a:hover, .dark .mobileAccountDropdown > a:focus-visible, .dark .mobileAccountDropdown > button:hover, .dark .mobileAccountDropdown > button:focus-visible { background: #382c50; }
+.desktopAccountMenu { position: relative; }
+.desktopAccountMenu .mobileAccountTrigger { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--ink); cursor: pointer; text-align: left; }
+.desktopAccountMenu .accountIdentity { color: var(--ink); }
+.desktopAccountMenu .accountIdentity strong { font-size: 13px; }
+.headerInner .wishlistLink { min-height: 48px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.headerSearch input { flex: 1; min-width: 0; }
+
+.mobileAccountDropdown > div > button { width: 100%; justify-content: flex-start; border: 0; background: transparent; color: var(--ink); }
+.petrol .mobileAccountDropdown { background: #1a211e; }
+.petrol .mobileAccountDropdown > a:hover, .petrol .mobileAccountDropdown > button:hover { background: #274b3b; color: #b7f5dc; }

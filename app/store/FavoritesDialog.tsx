@@ -37,7 +37,7 @@ export default function FavoritesDialog({
       <div className={s.dialogContent}>
         <header className={s.dialogTop}>
           <div>
-            <span className={s.eyebrow}>COLECȚIA TA</span>
+            <span className={s.eyebrow}>COLECTIA TA</span>
             <h2 id="favorites-title" className={s.favoritesTitle}>
               Produsele favorite{" "}
               <span className={s.countBadge}>{products.length}</span>
@@ -46,13 +46,13 @@ export default function FavoritesDialog({
           <button
             className={s.iconButton}
             onClick={close}
-            aria-label="Închide favoritele"
+            aria-label="Inchide favoritele"
           >
             ✕
           </button>
         </header>
         <p className={s.muted}>
-          Toate produsele salvate, din toate categoriile, într-un singur loc.
+          Toate produsele salvate, din toate categoriile, intr-un singur loc.
         </p>
         {favoriteError && (
           <p role="alert" className={s.priceWarning}>
@@ -60,7 +60,7 @@ export default function FavoritesDialog({
           </p>
         )}
         {loading ? (
-          <p role="status">Se încarcă favoritele…</p>
+          <p role="status">Se incarca favoritele…</p>
         ) : error ? (
           <p role="alert">{error}</p>
         ) : products.length ? (
@@ -81,7 +81,7 @@ export default function FavoritesDialog({
                   <div>
                     <small className={s.muted}>{product.categorie}</small>
                     <h3>{product.nume_produs}</h3>
-                    <span className={s.muted}>Preț en-gros</span>
+                    <span className={s.muted}>Pret en-gros</span>
                     <strong>{formatPrice(product.pret_engros)}</strong>
                     <small className={s.muted}>
                       RRP {formatPrice(product.pret_retail)} ·{" "}
@@ -92,9 +92,9 @@ export default function FavoritesDialog({
                 <button
                   className={s.textButton}
                   onClick={() => remove(product.id)}
-                  aria-label={`Elimină din favorite: ${product.nume_produs}`}
+                  aria-label={`Elimina din favorite: ${product.nume_produs}`}
                 >
-                  Elimină
+                  Elimina
                 </button>
               </li>
             ))}
@@ -102,12 +102,12 @@ export default function FavoritesDialog({
         ) : (
           <div className={s.empty}>
             <span aria-hidden="true">♡</span>
-            <h3>Încă nu ai produse favorite</h3>
-            <p>Apasă pe inimioara unui produs pentru a-l găsi aici.</p>
+            <h3>Inca nu ai produse favorite</h3>
+            <p>Apasa pe inimioara unui produs pentru a-l gasi aici.</p>
           </div>
         )}
         <button className={s.secondary} onClick={close}>
-          Continuă cumpărăturile
+          Continua cumparaturile
         </button>
       </div>
     </dialog>

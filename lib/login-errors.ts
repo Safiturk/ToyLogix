@@ -1,9 +1,9 @@
 export const loginMessages = {
-  email_not_confirmed: "Vă rugăm să vă confirmați adresa de email înainte de autentificare.",
-  approval_pending: "Emailul a fost confirmat. Contul dvs. este în curs de aprobare de către companie.",
-  invalid_credentials: "Email sau parolă incorectă.",
-  unavailable: "Serviciul nu este disponibil. Încercați mai târziu.",
-  rate_limited: "Prea multe încercări. Încercați mai târziu.",
+  email_not_confirmed: "Va rugam sa va confirmati adresa de email inainte de autentificare.",
+  approval_pending: "Emailul a fost confirmat. Contul dvs. este in curs de aprobare de catre companie.",
+  invalid_credentials: "Email sau parola incorecta.",
+  unavailable: "Serviciul nu este disponibil. Incercati mai tarziu.",
+  rate_limited: "Prea multe incercari. Incercati mai tarziu.",
 } as const;
 
 export function loginErrorCode(error: { code?: string; message?: string; status?: number }) {

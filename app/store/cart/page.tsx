@@ -63,7 +63,7 @@ export default function CartPage() {
           account.status !== "approved" ||
           account.is_active === false
         )
-          throw new Error("Contul nu este disponibil. Autentifică-te din nou.");
+          throw new Error("Contul nu este disponibil. Autentifica-te din nou.");
         const { data: billing, error: billingError } = await supabase
           .from("billing_profiles")
           .select(billingFields.map(([field]) => field).join(","))
@@ -72,7 +72,7 @@ export default function CartPage() {
           .maybeSingle();
         if (billingError)
           throw new Error(
-            "Datele companiei nu pot fi încărcate. Încearcă din nou.",
+            "Datele companiei nu pot fi incarcate. Incearca din nou.",
           );
         const archive = await hasArchiveColumn(supabase, controller.signal);
         let query = supabase
@@ -87,14 +87,14 @@ export default function CartPage() {
           controller.signal,
         );
         if (productError)
-          throw new Error("Produsele nu pot fi verificate. Încearcă din nou.");
+          throw new Error("Produsele nu pot fi verificate. Incearca din nou.");
         const fresh = lines.map((line) => {
           const product = (
             products as unknown as (ProductCard & { cod_bara: string })[]
           ).find((p) => p.id === line.product.id);
           if (!product || !validProduct(product))
             throw new Error(
-              `Produs indisponibil sau incomplet: ${line.product.nume_produs}. Elimină-l din coș pentru a continua.`,
+              `Produs indisponibil sau incomplet: ${line.product.nume_produs}. Elimina-l din cos pentru a continua.`,
             );
           return { ...line, product, boxes: Math.min(line.boxes, maxCartBoxes(product)) };
         });
@@ -116,7 +116,7 @@ export default function CartPage() {
             localStorage.setItem(storageKey, JSON.stringify(fresh.filter((line) => line.boxes > 0)));
             window.dispatchEvent(new Event("toylogix-cart"));
             setStatus(
-              "Coșul a fost actualizat cu stocul, prețurile și ambalajele curente. Cantitățile sunt limitate la stocul disponibil. Verifică totalurile.",
+              "Cosul a fost actualizat cu stocul, preturile si ambalajele curente. Cantitatile sunt limitate la stocul disponibil. Verifica totalurile.",
             );
           }
           return;
@@ -136,7 +136,7 @@ export default function CartPage() {
           setError(
             failure instanceof Error
               ? failure.message
-              : "Cererea nu poate fi pregătită. Încearcă din nou.",
+              : "Cererea nu poate fi pregatita. Incearca din nou.",
           );
         }
       }
@@ -160,7 +160,7 @@ export default function CartPage() {
       localStorage.removeItem(storageKey);
       router.push(`/store/orders?order=${result.order.id}${result.notificationPending ? "&notifications=pending" : ""}`);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Cererea nu a fost confirmată.");
+      setError(failure instanceof Error ? failure.message : "Cererea nu a fost confirmata.");
     } finally { setSubmitting(false); }
   }
   return (
@@ -169,22 +169,22 @@ export default function CartPage() {
         <div className={s.heading}>
           <BrandLogo className={s.logo} />
           <Link href="/store/orders">Comenzile mele</Link>
-          <Link href="/store">← Continuă cumpărăturile</Link>
+          <Link href="/store">← Continua cumparaturile</Link>
         </div>
         <div className={s.heading}>
           <div>
             <p className={s.muted}>TOYLOGIX · PARTENERI B2B</p>
-            <h1>Coșul meu / Cerere de comandă</h1>
+            <h1>Cosul meu / Cerere de comanda</h1>
           </div>
           {cart.lines.length > 0 && (
             <button
               className={s.secondary}
               onClick={() => {
                 cart.update(() => []);
-                setStatus("Coșul a fost golit.");
+                setStatus("Cosul a fost golit.");
               }}
             >
-              Golește coșul
+              Goleste cosul
             </button>
           )}
         </div>
@@ -196,17 +196,17 @@ export default function CartPage() {
         )}
         {!cart.lines.length ? (
           <section className={s.panel}>
-            <h2>Coșul este gol.</h2>
+            <h2>Cosul este gol.</h2>
             <Link href="/store">
-              Descoperă produsele și adaugă prima cutie →
+              Descopera produsele si adauga prima cutie →
             </Link>
           </section>
         ) : (
           <>
-            <section className={s.panel} aria-label="Produse în coș">
+            <section className={s.panel} aria-label="Produse in cos">
               <p className={s.muted}>
-                Cantitățile se solicită în cutii întregi. Cantitate (bucăți) =
-                cutii × bucăți per cutie.
+                Cantitatile se solicita in cutii intregi. Cantitate (bucati) =
+                cutii × bucati per cutie.
               </p>
               {cart.lines.map((line) => (
                 <article className={s.line} key={line.product.id}>
@@ -216,10 +216,10 @@ export default function CartPage() {
                       {line.product.bucati_per_cutie} buc./cutie ·{" "}
                       {money(lineTotals(line).unitCents)} / buc.
                     </p>
-                    <p>Cantitate: {lineTotals(line).quantity} bucăți</p>
+                    <p>Cantitate: {lineTotals(line).quantity} bucati</p>
                   </div>
                   <label>
-                    Număr de cutii
+                    Numar de cutii
                     <NumericInput
                       aria-label={`Cutii: ${line.product.nume_produs}`}
                       type="number"
@@ -246,21 +246,21 @@ export default function CartPage() {
                   <strong>{money(lineTotals(line).cents)}</strong>
                   <button
                     className={s.secondary}
-                    aria-label={`Elimină ${line.product.nume_produs}`}
+                    aria-label={`Elimina ${line.product.nume_produs}`}
                     onClick={() =>
                       cart.update((rows) =>
                         rows.filter((l) => l.product.id !== line.product.id),
                       )
                     }
                   >
-                    Elimină
+                    Elimina
                   </button>
                 </article>
               ))}
               <div className={s.totals}>
                 <span>
                   {cart.lines.length} produse · <b>{total.boxes} cutii</b> ·{" "}
-                  {total.quantity} bucăți
+                  {total.quantity} bucati
                 </span>
                 <strong>Total estimativ: {money(total.cents)}</strong>
               </div>
@@ -279,15 +279,15 @@ export default function CartPage() {
                   </dl>
                   {ready.missing && (
                     <p className={s.notice}>
-                      Unele date lipsesc și vor apărea ca „Nespecificat” în PDF.{" "}
-                      <Link href="/account">Completează datele contului</Link>.
+                      Unele date lipsesc si vor aparea ca „Nespecificat” in PDF.{" "}
+                      <Link href="/account">Completeaza datele contului</Link>.
                     </p>
                   )}
                 </>
               ) : (
                 <p role="status">
                   {error ||
-                    "Se verifică produsele și datele contului…"}
+                    "Se verifica produsele si datele contului…"}
                 </p>
               )}
               {error && (
@@ -298,17 +298,17 @@ export default function CartPage() {
                     setRevision((r) => r + 1);
                   }}
                 >
-                  Încearcă din nou
+                  Incearca din nou
                 </button>
               )}
               {error && <p role="alert" className={s.notice}>{error}</p>}
               <div className={s.actions}>
                 <button className={s.primary} disabled={!ready || submitting} onClick={submit}>
-                  {submitting ? "Se trimite cererea…" : "Trimite cererea de comandă"}
+                  {submitting ? "Se trimite cererea…" : "Trimite cererea de comanda"}
                 </button>
                 <Link href="/store/orders">Comenzile mele</Link>
               </div>
-              <p className={s.muted}>Cererea și rezumatul PDF sunt trimise automat către tine și ToyLogix. Plata se efectuează prin transfer bancar după aprobare.</p>
+              <p className={s.muted}>Cererea si rezumatul PDF sunt trimise automat catre tine si ToyLogix. Plata se efectueaza prin transfer bancar dupa aprobare.</p>
             </section>
           </>
         )}

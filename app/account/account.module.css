@@ -1,0 +1,21 @@
+.navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.back { color: #594389; font-size: 14px; font-weight: 600; padding-block: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.action { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border: 1px solid #ded8ec; border-radius: 10px; background: white; color: #45345e; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; }
+.action:hover { background: #f3effa; border-color: #9276c8; }
+.navigation :focus-visible, .securityCard :focus-visible { outline: 2px solid #7754c8; outline-offset: 3px; }
+.securityCard { display: flex; flex-direction: column; gap: 20px; }
+.securityCard h1 { font-size: 26px; font-weight: 700; line-height: 1.25; margin: 0; }
+.securityCard p { line-height: 1.65; }
+.success { padding: 18px; border: 1px solid #b9dfcc; border-radius: 12px; background: #effaf4; color: #20563c; }
+.success p { margin: 8px 0 0; font-size: 14px; }
+.recovery { padding: 18px; border: 1px solid #e0daec; border-radius: 12px; }
+.recovery summary { cursor: pointer; font-weight: 600; line-height: 1.5; }
+.recovery p { font-size: 14px; color: #625972; margin: 14px 0; }
+.recovery button { padding-inline: 16px; }
+@media (max-width: 600px) {
+  .navigation { align-items: stretch; }
+  .actions { width: 100%; }
+  .action { flex: 1 1 140px; }
+  .securityCard h1 { font-size: 23px; }
+}

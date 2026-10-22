@@ -15,10 +15,10 @@ type Audit = {
 };
 const labels: Record<string, string> = {
   role_changed: "Rol modificat",
-  approval_changed: "Aprobare modificată",
+  approval_changed: "Aprobare modificata",
   access_changed: "Acces modificat",
-  profile_deleted: "Profil șters",
-  account_delete_requested: "Ștergere cont solicitată",
+  profile_deleted: "Profil sters",
+  account_delete_requested: "Stergere cont solicitata",
   recovery_codes_rotated: "Coduri de recuperare regenerate",
   mfa_recovery_used: "Recuperare 2FA",
 };
@@ -54,7 +54,7 @@ export default function AuditHistory({
       if (error) {
         setRows([]);
         setError(
-          "Jurnalul nu a putut fi încărcat. Verifică accesul și conexiunea.",
+          "Jurnalul nu a putut fi incarcat. Verifica accesul si conexiunea.",
         );
         return;
       }
@@ -77,20 +77,20 @@ export default function AuditHistory({
       {open && (
         <div className="space-y-4 mt-4">
           <p className="text-sm text-slate-500">
-            Identificatorii conturilor rămân în istoric chiar și după ștergere.
+            Identificatorii conturilor raman in istoric chiar si dupa stergere.
           </p>
           {error && <p role="alert">{error}</p>}
           {loading ? (
-            <p role="status">Se încarcă…</p>
+            <p role="status">Se incarca…</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr>
                     <th className="p-2">Data</th>
-                    <th className="p-2">Acțiune</th>
+                    <th className="p-2">Actiune</th>
                     <th className="p-2">Autor / Cont vizat</th>
-                    <th className="p-2">Înainte → După</th>
+                    <th className="p-2">Inainte → Dupa</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -118,7 +118,7 @@ export default function AuditHistory({
                 </tbody>
               </table>
               {!rows.length && !error && (
-                <p>Nu există evenimente pe această pagină.</p>
+                <p>Nu exista evenimente pe aceasta pagina.</p>
               )}
             </div>
           )}
@@ -134,10 +134,10 @@ export default function AuditHistory({
               disabled={loading || !more}
               onClick={() => setPage(page + 1)}
             >
-              Următor →
+              Urmator →
             </button>
             <button disabled={loading} onClick={() => setReload(reload + 1)}>
-              Actualizează
+              Actualizeaza
             </button>
           </div>
         </div>

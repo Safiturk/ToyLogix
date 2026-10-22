@@ -1,31 +1,19 @@
 # Database and authentication setup
 
-## Prerequisites
+The database setup uses an existing ToyLogix Supabase database containing the legacy `public.utilizatori` and `public.produse` tables. Their original production DDL is not included in the repository. The schemas in `tests/fixtures` are isolated test schemas rather than a deployable baseline.
 
-Use an existing ToyLogix Supabase database with the legacy `public.utilizatori` and `public.produse` tables. Their original production DDL is not included. `tests/fixtures` contains isolated test schemas, not a deployable baseline.
+Preparation involves backing up the target database, reconciling duplicate profile emails, and confirming that an approved administrator maps to a confirmed Supabase Auth user. The account-security migration aborts if no verified administrator exists. Since legacy password hashes are not Supabase Auth credentials, those accounts require migration through a trusted invitation or password-reset process.
 
-Before applying migrations, back up the target database, reconcile duplicate profile emails, and confirm that an approved administrator maps to a confirmed Supabase Auth user. The account-security migration aborts if no verified administrator exists. Legacy password hashes are not Supabase Auth credentials; migrate those accounts through a trusted invitation or password-reset process.
+The files in `supabase/migrations` are applied in filename order. The stock and account-hardening migrations need to be coordinated with the application release because old clients cannot write stock directly after the stock migration, while hardening requires administrator MFA.
 
-Apply the files in `supabase/migrations` in filename order. Coordinate the stock and account-hardening migrations with the application release: old clients cannot write stock directly after the stock migration, and hardening requires administrator MFA.
+Local environment configuration starts with a copy of `.env.example` saved as `.env.local`. `NEXT_PUBLIC_SUPABASE_URL` contains the project HTTPS URL, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` contains a publishable key or legacy anon key, never a secret/service-role key. `NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED` remains blank or `false` for the legacy authentication path. It is set to `true` only once the hardening migration and server configuration are ready, followed by a rebuild.
 
-## Environment
+Hardening also requires the server-only `SUPABASE_SERVICE_ROLE_KEY`, a random `AUTH_RATE_LIMIT_SECRET` of at least 32 characters, and an `AUTH_SITE_URL` matching the exact browser origin. Local development can use `http://localhost:3000` as its origin.
 
-Copy `.env.example` to `.env.local`. Set:
+Registration notifications are optional and depend on `RESEND_API_KEY`, `NOTIFICATION_FROM`, and `NOTIFICATION_TO` being configured together with a verified sender domain. When notifications are unused, all three remain blank. The Netlify function reads these server settings. Supabase supplies the Edge Function's `SUPABASE_URL`, public key, and server credentials in its own runtime. `NETLIFY` is a hosting-provided flag and is not required locally.
 
-- `NEXT_PUBLIC_SUPABASE_URL`: the project HTTPS URL.
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: a publishable key or legacy anon key, never a secret/service-role key.
-- `NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED`: leave blank or set `false` for the legacy authentication path. Set `true` only after the hardening migration and server configuration are ready, then rebuild.
+Authentication configuration includes enabling the Supabase email provider and configuring email delivery. The Site URL and the exact `/login`, `/email-confirmed`, and `/update-password` redirect URLs are configured for each supported origin. Email templates retain `{{ .ConfirmationURL }}`.
 
-Hardening also requires server-only `SUPABASE_SERVICE_ROLE_KEY`, a random `AUTH_RATE_LIMIT_SECRET` of at least 32 characters, and `AUTH_SITE_URL` matching the exact browser origin. Local development can use `http://localhost:3000` as its origin.
+In legacy mode, account deletion uses `supabase/functions/delete-account`, deployed with JWT verification enabled. This flow depends on `20260924113302_account_delete_cascade.sql` being applied first. In hardening mode, deletion uses the Next.js server endpoint.
 
-Registration notifications are optional. Configure `RESEND_API_KEY`, `NOTIFICATION_FROM`, and `NOTIFICATION_TO` together, with a verified sender domain. Otherwise leave all three blank. The Netlify function uses these server settings.
-
-Supabase supplies the Edge Function's `SUPABASE_URL`, public key, and server credentials in its own runtime. `NETLIFY` is a hosting-provided flag; it is not required locally.
-
-## Auth configuration
-
-Enable the Supabase email provider and configure email delivery. Set the Site URL and allow exact `/login`, `/email-confirmed`, and `/update-password` redirect URLs for each supported origin. Email templates should retain `{{ .ConfirmationURL }}`.
-
-In legacy mode, account deletion uses `supabase/functions/delete-account`. Deploy it with JWT verification enabled and apply `20260924113302_account_delete_cascade.sql` before using that flow. In hardening mode, deletion uses the Next.js server endpoint.
-
-After deployment, verify registration, confirmation, customer approval, login, password recovery, administrator MFA, and access revocation against staging accounts. Publishing the source repository does not apply database migrations or deploy the application.
+Deployment verification covers registration, confirmation, customer approval, login, password recovery, administrator MFA, and access revocation using staging accounts. Publishing the source repository does not apply database migrations or deploy the application.

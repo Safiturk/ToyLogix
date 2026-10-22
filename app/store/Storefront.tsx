@@ -1,12 +1,12 @@
 "use client";
 import NumericInput from "@/app/components/NumericInput";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { signOutAccount } from "@/lib/account";
 import { categorySlug } from "@/lib/category-path";
-import BarcodeScanner from "../components/BarcodeScanner";
 import FilterDrawer from "../components/FilterDrawer";
 import CategoryDrawer from "../components/CategoryDrawer";
 import BrandLogo from "../components/BrandLogo";
@@ -28,11 +28,12 @@ import {
 import ProductPicture from "./ProductPicture";
 import FavoritesDialog from "./FavoritesDialog";
 import MobileAccountMenu from "./MobileAccountMenu";
-import OrderNotifications from "@/app/components/OrderNotifications";
 import ProductDetails from "./ProductDetails";
 import { AddToCart, CartLink } from "./CartControls";
 import { useStoreSession, parseStoreSession } from "./useStoreSession";
 import { useFavorites } from "./useFavorites";
+
+const ThemePicker = dynamic(() => import("./ThemePicker"));
 
 export default function Storefront({
   categoryName,
@@ -52,7 +53,8 @@ export default function Storefront({
     await signOutAccount();
     router.replace("/login");
   };
-  const { theme, toggleTheme } = useCatalogTheme();
+  const { theme } = useCatalogTheme();
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [products, setProducts] = useState<ProductCard[]>([]);
   const [fetching, setLoading] = useState(true);
   const [loadedKey, setLoadedKey] = useState("");
@@ -84,7 +86,6 @@ export default function Storefront({
   useEffect(() => {
     if (selected || favoritesOpen) cancelWishlistMotion();
   }, [selected, favoritesOpen, cancelWishlistMotion]);
-  const [scanner, setScanner] = useState(false);
   const [total, setTotal] = useState(0);
   const [facets, setFacets] = useState<Record<CatalogField, string[]>>({
     categorie: [],
@@ -152,7 +153,7 @@ export default function Storefront({
         }
       } catch {
         if (!controller.signal.aborted)
-          setFacetError("Filtrele nu pot fi încărcate. Încercați din nou.");
+          setFacetError("Filtrele nu pot fi incarcate. Incercati din nou.");
       }
     }
     void load();
@@ -213,7 +214,7 @@ export default function Storefront({
       } catch {
         if (!controller.signal.aborted)
           setError(
-            "Catalogul nu poate fi încărcat momentan. Verificați conexiunea și încercați din nou.",
+            "Catalogul nu poate fi incarcat momentan. Verificati conexiunea si incercati din nou.",
           );
       } finally {
         if (!controller.signal.aborted) {
@@ -262,7 +263,7 @@ export default function Storefront({
         if (!controller.signal.aborted) setFavoriteProducts(data);
       } catch {
         if (!controller.signal.aborted)
-          setFavoritesLoadError("Favoritele nu pot fi încărcate.");
+          setFavoritesLoadError("Favoritele nu pot fi incarcate.");
       } finally {
         if (!controller.signal.aborted) setFavoritesLoading(false);
       }
@@ -296,13 +297,6 @@ export default function Storefront({
         : "smooth",
     });
   };
-  const scanSuccess = useCallback(
-    (code: string) => {
-      setQuery(code);
-      setScanner(false);
-    },
-    [setScanner],
-  );
   const featured = products.find(
     (product) => productImages(product).length > 0,
   );
@@ -332,18 +326,18 @@ export default function Storefront({
                 </label>
               ))}
               {!facetOptions(field).length && (
-                <small className={s.muted}>Nicio opțiune disponibilă</small>
+                <small className={s.muted}>Nicio optiune disponibila</small>
               )}
             </div>
           </details>
         );
       })}
       <details className={s.filterSection} open>
-        <summary>Vârstă</summary>
+        <summary>Varsta</summary>
         <label className={s.facetOptions}>
-          <span className={s.screenReader}>Vârstă recomandată</span>
+          <span className={s.screenReader}>Varsta recomandata</span>
           <select value={age} onChange={(e) => setAge(e.target.value)}>
-            <option value="">Toate vârstele</option>
+            <option value="">Toate varstele</option>
             {facetOptions("varsta_recomandata").map((v) => (
               <option key={v}>{v}</option>
             ))}
@@ -351,11 +345,11 @@ export default function Storefront({
         </label>
       </details>
       <details className={s.filterSection} open>
-        <summary>Preț en-gros (RON)</summary>
+        <summary>Pret en-gros (RON)</summary>
         <div className={s.facetOptions}>
           <div className={s.priceRange}>
             <NumericInput
-              aria-label="Preț minim"
+              aria-label="Pret minim"
               type="number"
               min="0"
               step="0.01"
@@ -365,11 +359,11 @@ export default function Storefront({
             />
             <span>–</span>
             <NumericInput
-              aria-label="Preț maxim"
+              aria-label="Pret maxim"
               type="number"
               min="0"
               step="0.01"
-              placeholder="Până la"
+              placeholder="Pana la"
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
             />
@@ -378,7 +372,7 @@ export default function Storefront({
             maxPrice !== "" &&
             Number(minPrice) > Number(maxPrice) && (
               <p role="alert" className={s.priceWarning}>
-                Prețul minim trebuie să fie mai mic decât prețul maxim.
+                Pretul minim trebuie sa fie mai mic decat pretul maxim.
               </p>
             )}
         </div>
@@ -389,24 +383,24 @@ export default function Storefront({
           checked={stockOnly}
           onChange={(e) => setStockOnly(e.target.checked)}
         />
-        Doar produse în stoc
+        Doar produse in stoc
       </label>
       <button className={s.textButton} onClick={resetFilters}>
-        Resetează filtrele
+        Reseteaza filtrele
       </button>
     </>
   );
   if (!user) return null;
   return (
     <div
-      className={`${s.page} ${isCategoryPage ? s.categoryPage : ""} ${theme === "dark" ? s.dark : ""}`}
+      className={`${s.page} ${isCategoryPage ? s.categoryPage : ""} ${theme !== "light" ? s.dark : ""} ${theme === "petrol" ? s.petrol : ""}`}
       data-theme={theme}
     >
       <a className={s.skipLink} href="#catalog">
         Mergi la catalog
       </a>
       <div className={s.topbar}>
-        UN UNIVERS DE JOACĂ. UN PARTENER PENTRU AFACEREA TA.
+        UN UNIVERS DE JOACA. UN PARTENER PENTRU AFACEREA TA.
       </div>
       <header className={s.header}>
         <div className={s.headerInner}>
@@ -418,8 +412,7 @@ export default function Storefront({
               favoriteCount={favorites.length}
               favoritesOpen={favoritesOpen}
               onOpenFavorites={() => setFavoritesOpen(true)}
-              isDark={theme === "dark"}
-              onToggleTheme={toggleTheme}
+              onOpenAppearance={() => setAppearanceOpen(true)}
               onLogout={logout}
               wishlistTargetRef={mobileWishlistTarget}
             />
@@ -449,61 +442,21 @@ export default function Storefront({
           <div className={`${s.search} ${s.headerSearch}`}>
             <span aria-hidden="true">⌕</span>
             <input
-              aria-label="Caută produse"
-              placeholder="Caută un produs, brand sau cod de bare…"
+              aria-label="Cauta produse"
+              placeholder="Cauta un produs, brand sau cod de bare…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            <button
-              title="Scanează codul de bare"
-              aria-label="Scanează codul de bare"
-              onClick={() => setScanner(true)}
-            >
-              ▥
-            </button>
-            {query && (
-              <button aria-label="Șterge căutarea" onClick={() => setQuery("")}>
+{query && (
+              <button aria-label="Sterge cautarea" onClick={() => setQuery("")}>
                 ✕
               </button>
             )}
           </div>
-          <nav className={s.navigation} aria-label="Navigare principală">
+          <nav className={s.navigation} aria-label="Navigare principala">
             {user ? (
               <div className={s.accountControls}>
-                <button
-                  className={s.themeToggle}
-                  onClick={toggleTheme}
-                  aria-label={
-                    theme === "dark"
-                      ? "Activează tema luminoasă"
-                      : "Activează tema întunecată"
-                  }
-                  title={
-                    theme === "dark" ? "Tema luminoasă" : "Tema întunecată"
-                  }
-                  aria-pressed={theme === "dark"}
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    aria-hidden="true"
-                  >
-                    {theme === "dark" ? (
-                      <>
-                        <circle cx="12" cy="12" r="4" />
-                        <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
-                      </>
-                    ) : (
-                      <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" />
-                    )}
-                  </svg>
-                </button>
-                <button
+<button
                   className={s.wishlistLink}
                   aria-haspopup="dialog"
                   aria-expanded={favoritesOpen}
@@ -515,73 +468,16 @@ export default function Storefront({
                   </span>{" "}
                   Favorite <b ref={wishlistBadge}>{favorites.length}</b>
                 </button>
-                <Link href="/store/orders" className={s.accountBadge}>Comenzile mele</Link>
-                <OrderNotifications admin={user.rol === "admin"} />
-                <Link
-                  href="/account"
-                  className={s.accountBadge}
-                  aria-label="Contul meu"
-                >
-                  <span className={s.accountAvatar} aria-hidden="true">
-                    {(user.nume_complet || "Partener")
-                      .trim()
-                      .split(/\s+/)
-                      .slice(0, 2)
-                      .map((part) => part[0])
-                      .join("")
-                      .toLocaleUpperCase("ro")}
-                  </span>
-                  <div className={s.accountIdentity}>
-                    <span className={s.userName} title={user.nume_complet}>
-                      {user.nume_complet || "Partener"}
-                    </span>
-                    <small>
-                      {user.rol === "admin"
-                        ? "Administrator"
-                        : "Partener ToyLogix"}
-                    </small>
-                  </div>
-                </Link>
-                {user.rol === "admin" && (
-                  <Link
-                    className={`${s.headerAction} ${s.adminAction}`}
-                    href="/admin"
-                  >
-                    Admin Panel{" "}
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      aria-hidden="true"
-                    >
-                      <path d="M7 17 17 7M7 7h10v10" />
-                    </svg>
-                  </Link>
-                )}
-                <button
-                  className={`${s.headerAction} ${s.logoutAction}`}
-                  aria-label="Ieșire din cont"
-                  title="Ieșire din cont"
-                  onClick={logout}
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M9 4H5v16h4M10 12h11m-4-4 4 4-4 4" />
-                  </svg>
-                  <span>Ieșire</span>
-                </button>
+                <MobileAccountMenu
+                  desktop
+                  name={user.nume_complet}
+                  isAdmin={user.rol === "admin"}
+                  favoriteCount={favorites.length}
+                  favoritesOpen={favoritesOpen}
+                  onOpenFavorites={() => setFavoritesOpen(true)}
+                  onOpenAppearance={() => setAppearanceOpen(true)}
+                  onLogout={logout}
+                />
               </div>
             ) : (
               <>
@@ -603,20 +499,20 @@ export default function Storefront({
                 PENTRU MICILE MARILE DESCOPERIRI
               </span>
               <h1 id="hero-title">
-                Joaca începe aici.
+                Joaca incepe aici.
                 <br />
-                <em>La fel și oportunitățile.</em>
+                <em>La fel si oportunitatile.</em>
               </h1>
               <p>
-                Descoperă jucării pentru magazinul tău. Explorează colecțiile,
-                compară produsele și găsește următorul favorit.
+                Descopera jucarii pentru magazinul tau. Exploreaza colectiile,
+                compara produsele si gaseste urmatorul favorit.
               </p>
               <a className={s.primary} href="#catalog">
-                Explorează catalogul <span aria-hidden="true">↓</span>
+                Exploreaza catalogul <span aria-hidden="true">↓</span>
               </a>
               <div className={s.heroMeta}>
-                <span>01 / Descoperă</span>
-                <span>02 / Compară</span>
+                <span>01 / Descopera</span>
+                <span>02 / Compara</span>
                 <span>03 / Alege</span>
               </div>
             </div>
@@ -646,7 +542,7 @@ export default function Storefront({
                 </div>
               )}
               <span className={s.artNote}>
-                Curiozitate. Creativitate. Joacă.
+                Curiozitate. Creativitate. Joaca.
               </span>
             </div>
           </section>
@@ -654,7 +550,7 @@ export default function Storefront({
         {isCategoryPage && (
           <div className={s.categoryHeading}>
             <nav className={s.breadcrumb} aria-label="Breadcrumb">
-              <Link href="/store">Acasă</Link>
+              <Link href="/store">Acasa</Link>
               <span aria-hidden="true">›</span>
               <span aria-current="page">{displayCategory}</span>
             </nav>
@@ -678,10 +574,10 @@ export default function Storefront({
               <div>
                 <span className={s.eyebrow}>CATALOGUL TOYLOGIX</span>
                 <h2 id="catalog-title">
-                  O lume de posibilități<span>.</span>
+                  O lume de posibilitati<span>.</span>
                 </h2>
               </div>
-              <p>Jucării pentru fiecare etapă a copilăriei.</p>
+              <p>Jucarii pentru fiecare etapa a copilariei.</p>
             </div>
           )}
           {isCategoryPage && (
@@ -692,7 +588,7 @@ export default function Storefront({
           <div className={isCategoryPage ? s.categoryLayout : undefined}>
             {isCategoryPage && (
               <aside className={s.filterSidebar} aria-label="Filtre produse">
-                <h2>Filtrează produsele</h2>
+                <h2>Filtreaza produsele</h2>
                 {filterControls}
               </aside>
             )}
@@ -700,16 +596,16 @@ export default function Storefront({
               {isCategoryPage && showPromotion && (
                 <aside
                   className={s.promoStrip}
-                  aria-label="Descoperă catalogul ToyLogix"
+                  aria-label="Descopera catalogul ToyLogix"
                 >
                   <span className={s.promoIcon} aria-hidden="true">
                     ✦
                   </span>
                   <div>
-                    <strong>Idei mici. Oportunități mari.</strong>
-                    <p>Descoperă următoarele favorite ale magazinului tău.</p>
+                    <strong>Idei mici. Oportunitati mari.</strong>
+                    <p>Descopera urmatoarele favorite ale magazinului tau.</p>
                   </div>
-                  <span className={s.promoLabel}>COLECȚIA TOYLOGIX</span>
+                  <span className={s.promoLabel}>COLECTIA TOYLOGIX</span>
                 </aside>
               )}
               <div className={s.toolbar}>
@@ -730,7 +626,7 @@ export default function Storefront({
                     aria-expanded={filtersOpen}
                     aria-controls="mobile-filters"
                   >
-                    Filtrează
+                    Filtreaza
                   </button>
                 )}
               </div>
@@ -748,38 +644,38 @@ export default function Storefront({
                 <p role="alert" className={s.priceWarning}>
                   {facetError}{" "}
                   <button className={s.textButton} onClick={() => setRetry((value) => value + 1)}>
-                    Reîncearcă
+                    Reincearca
                   </button>
                 </p>
               )}
               <div className={s.resultRow}>
                 <span role="status">
                   {loading
-                    ? "Se încarcă produsele…"
+                    ? "Se incarca produsele…"
                     : error
                       ? "Catalog indisponibil"
                       : `${total} ${total === 1 ? "produs" : "produse"}`}
                   {hasActiveFilters && !loading && (
                     <button className={s.textButton} onClick={resetFilters}>
-                      Șterge filtrele
+                      Sterge filtrele
                     </button>
                   )}
                 </span>
                 <label>
-                  Sortează după
+                  Sorteaza dupa
                   <select
                     value={sort}
                     onChange={(e) => setSort(e.target.value)}
                   >
                     <option value="new">Cele mai noi</option>
-                    <option value="price-up">Preț crescător</option>
-                    <option value="price-down">Preț descrescător</option>
+                    <option value="price-up">Pret crescator</option>
+                    <option value="price-down">Pret descrescator</option>
                     <option value="name">Nume A–Z</option>
                   </select>
                 </label>
                 {isCategoryPage && (
                   <label>
-                    Produse pe pagină
+                    Produse pe pagina
                     <select
                       value={pageSize}
                       onChange={(e) => setPageSize(Number(e.target.value))}
@@ -802,7 +698,7 @@ export default function Storefront({
               ) : error ? (
                 <div className={s.empty} role="alert">
                   <span aria-hidden="true">↻</span>
-                  <h3>Încercăm din nou?</h3>
+                  <h3>Incercam din nou?</h3>
                   <p>{error}</p>
                   <button
                     className={s.primary}
@@ -812,7 +708,7 @@ export default function Storefront({
                       setRetry((value) => value + 1);
                     }}
                   >
-                    Reîncearcă
+                    Reincearca
                   </button>
                 </div>
               ) : total === 0 ? (
@@ -820,13 +716,13 @@ export default function Storefront({
                   <span aria-hidden="true">⌕</span>
                   <h3>
                     {hasActiveFilters
-                      ? "Niciun produs găsit"
-                      : "Catalogul se pregătește"}
+                      ? "Niciun produs gasit"
+                      : "Catalogul se pregateste"}
                   </h3>
                   <p>
                     {hasActiveFilters
-                      ? "Încearcă alt termen sau elimină câteva filtre."
-                      : "Revino în curând pentru a descoperi produsele disponibile."}
+                      ? "Incearca alt termen sau elimina cateva filtre."
+                      : "Revino in curand pentru a descoperi produsele disponibile."}
                   </p>
                   {hasActiveFilters && (
                     <button className={s.primary} onClick={resetFilters}>
@@ -840,7 +736,7 @@ export default function Storefront({
                     <article key={product.id} className={s.card}>
                       <button
                         className={s.favoriteButton}
-                        aria-label={`${favorites.includes(product.id) ? "Elimină din" : "Adaugă la"} favorite: ${product.nume_produs}`}
+                        aria-label={`${favorites.includes(product.id) ? "Elimina din" : "Adauga la"} favorite: ${product.nume_produs}`}
                         aria-pressed={favorites.includes(product.id)}
                         onClick={(event) => {
                           const added = toggleFavorite(product.id);
@@ -938,7 +834,7 @@ export default function Storefront({
                               }
                             >
                               {Number(product.stoc_actual) > 0
-                                ? "În stoc"
+                                ? "In stoc"
                                 : "Stoc epuizat"}
                             </span>
                           </div>
@@ -946,13 +842,13 @@ export default function Storefront({
                           <p className={s.pack}>
                             {product.bucati_per_cutie
                               ? `${product.bucati_per_cutie} buc. / cutie`
-                              : "Ambalare nespecificată"}
+                              : "Ambalare nespecificata"}
                             {product.varsta_recomandata &&
                               ` · ${product.varsta_recomandata}`}
                           </p>
                           <div className={s.cardPrice}>
                             <div>
-                              <small>PREȚ EN-GROS</small>
+                              <small>PRET EN-GROS</small>
                               <strong>
                                 {formatPrice(product.pret_engros)}
                               </strong>
@@ -975,7 +871,7 @@ export default function Storefront({
                     <button
                       disabled={currentPage === 1}
                       onClick={() => changePage(currentPage - 1)}
-                      aria-label="Pagina precedentă"
+                      aria-label="Pagina precedenta"
                     >
                       ←
                     </button>
@@ -1007,7 +903,7 @@ export default function Storefront({
                     <button
                       disabled={currentPage === pageCount}
                       onClick={() => changePage(currentPage + 1)}
-                      aria-label="Pagina următoare"
+                      aria-label="Pagina urmatoare"
                     >
                       →
                     </button>
@@ -1024,10 +920,10 @@ export default function Storefront({
         {!isCategoryPage && !user && (
           <section className={s.partner}>
             <div>
-              <span className={s.eyebrow}>CREȘTEM PRIN JOACĂ</span>
-              <h2>Următorul capitol al magazinului tău.</h2>
+              <span className={s.eyebrow}>CRESTEM PRIN JOACA</span>
+              <h2>Urmatorul capitol al magazinului tau.</h2>
               <p>
-                Solicită un cont de partener ToyLogix. Echipa noastră va
+                Solicita un cont de partener ToyLogix. Echipa noastra va
                 verifica cererea ta.
               </p>
             </div>
@@ -1041,14 +937,14 @@ export default function Storefront({
         <Link href="/store" className={s.footerLogo}>
           ToyLogix<span>·</span>
         </Link>
-        <p>Jucării. Idei. Noi posibilități.</p>
+        <p>Jucarii. Idei. Noi posibilitati.</p>
         <nav aria-label="Navigare subsol">
           <a href="#catalog">Catalog</a>
-          <Link href="/login">Contul meu</Link>
-          <Link href="/register">Parteneriat B2B</Link>
+          <Link href="/account">Contul meu</Link>
         </nav>
         <small>© {new Date().getFullYear()} ToyLogix</small>
       </footer>
+      {appearanceOpen && <ThemePicker close={() => setAppearanceOpen(false)} />}
       {isCategoryPage && filtersOpen && (
         <FilterDrawer close={() => setFiltersOpen(false)} count={total}>
           {filterControls}
@@ -1083,12 +979,6 @@ export default function Storefront({
           isFavorite={favorites.includes(selected.id)}
           toggleFavorite={() => toggleFavorite(selected.id)}
           favoriteError={favoriteError}
-        />
-      )}{" "}
-      {scanner && (
-        <BarcodeScanner
-          onScanSuccess={scanSuccess}
-          onClose={() => setScanner(false)}
         />
       )}
     </div>

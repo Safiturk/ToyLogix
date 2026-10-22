@@ -1,6 +1,6 @@
 export const orderStatuses = {
- pending_review: 'Cerere în curs de verificare', awaiting_payment: 'În așteptarea plății',
- payment_under_review: 'Plată în curs de verificare', payment_confirmed: 'Plată confirmată', cancelled: 'Anulată', rejected: 'Respinsă',
+ pending_review: 'Cerere in curs de verificare', awaiting_payment: 'In asteptarea platii',
+ payment_under_review: 'Plata in curs de verificare', payment_confirmed: 'Plata confirmata', cancelled: 'Anulata', rejected: 'Respinsa',
 } as const;
 export type OrderStatus = keyof typeof orderStatuses;
 export type Order = { id: string; code: string; user_id: string; status: OrderStatus; total_cents: number; bank_iban: string; bank_beneficiary: string; bank_name: string; receipt_url: string | null; created_at: string; customer_email: string; company: { account: import('./account').Account; billing: import('./account').Billing } };

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       return authJson(
         {
           error:
-            "Contul nu poate fi șters. Verificați drepturile 2FA și istoricul asociat; puteți închide accesul.",
+            "Contul nu poate fi sters. Verificati drepturile 2FA si istoricul asociat; puteti inchide accesul.",
         },
         403,
       );
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       return authJson(
         {
           error:
-            "Accesul este închis, dar ștergerea Auth nu a reușit. Verificați înregistrările sau fișierele asociate înainte de a încerca din nou.",
+            "Accesul este inchis, dar stergerea Auth nu a reusit. Verificati inregistrarile sau fisierele asociate inainte de a incerca din nou.",
         },
         409,
       );
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     return authJson(
       {
         error:
-          "Ștergerea contului nu a fost confirmată. Verificați sesiunea și configurația serverului.",
+          "Stergerea contului nu a fost confirmata. Verificati sesiunea si configuratia serverului.",
       },
       503,
     );

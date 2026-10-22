@@ -39,7 +39,7 @@ export function useCart() {
       return true;
     } catch {
       setError(
-        "Coșul nu poate fi salvat. Permite stocarea locală în browser și încearcă din nou.",
+        "Cosul nu poate fi salvat. Permite stocarea locala in browser si incearca din nou.",
       );
       return false;
     }

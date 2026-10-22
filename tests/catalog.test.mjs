@@ -14,8 +14,8 @@ import { createProductDraft } from "../app/admin/models.ts";
 const product = {
   ...createProductDraft(),
   id: 1,
-  nume_produs: "Mașină de curse",
-  brand: " Șotron ",
+  nume_produs: "Ma\u0219in\u0103 de curse",
+  brand: " \u0218otron ",
   material: "Lemn",
   varsta_recomandata: "3-6 ani",
   pret_engros: 25,
@@ -33,7 +33,7 @@ const filters = {
 };
 
 test("Romanian search ignores case, accents and surrounding spaces", () => {
-  assert.equal(normalizeCatalogText(" ȘȚÂÎĂ "), "staia");
+  assert.equal(normalizeCatalogText(" \u0218\u021a\u00c2\u00ce\u0102 "), "staia");
   assert.equal(normalizeCatalogText(null), "");
   for (const query of ["masina", "SOTRON", "00594"])
     assert.equal(matchesCatalogFilters(product, { ...filters, query }), true);
@@ -62,7 +62,7 @@ test("filters combine with inclusive price bounds and independent stock selectio
   assert.equal(
     matchesCatalogFilters(product, {
       ...filters,
-      brands: ["șotron"],
+      brands: ["\u0219otron"],
       materials: ["lemn"],
       age: "3-6 ani",
       minPrice: "25",

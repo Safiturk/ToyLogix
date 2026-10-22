@@ -86,7 +86,7 @@ export default function ProductDetails({
           <button
             className={s.iconButton}
             onClick={close}
-            aria-label="Închide detaliile"
+            aria-label="Inchide detaliile"
           >
             ✕
           </button>
@@ -134,7 +134,7 @@ export default function ProductDetails({
                 bounce(event.currentTarget.querySelector("svg"));
                 setToast({
                   message: added
-                    ? "Adăugat la favorite"
+                    ? "Adaugat la favorite"
                     : "Eliminat din favorite",
                 });
               }}
@@ -150,7 +150,7 @@ export default function ProductDetails({
               >
                 <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
               </svg>
-              {isFavorite ? "Elimină din favorite" : "Adaugă la favorite"}
+              {isFavorite ? "Elimina din favorite" : "Adauga la favorite"}
             </button>
             {favoriteError && (
               <p role="alert" className={s.priceWarning}>
@@ -171,26 +171,26 @@ export default function ProductDetails({
               }
             >
               {Number(product.stoc_actual) > 0
-                ? `În stoc · ${product.stoc_actual} cutii`
+                ? `In stoc · ${product.stoc_actual} cutii`
                 : "Stoc epuizat"}
             </span>
             <div className={s.pricePanel}>
-              <span className={s.eyebrow}>Preț en-gros / bucată</span>
+              <span className={s.eyebrow}>Pret en-gros / bucata</span>
               <strong>{formatPrice(product.pret_engros)}</strong>
               <p>
-                Preț recomandat de vânzare: {formatPrice(product.pret_retail)}
+                Pret recomandat de vanzare: {formatPrice(product.pret_retail)}
               </p>
               <hr />
               <span>
                 Ambalare:{" "}
-                <b>{product.bucati_per_cutie || "—"} bucăți / cutie</b>
+                <b>{product.bucati_per_cutie || "—"} bucati / cutie</b>
               </span>
             </div>
             <AddToCart product={product} />
             <dl className={s.specifications}>
               {[
                 ["Cod de bare", detail?.cod_bara],
-                ["Vârstă recomandată", product.varsta_recomandata],
+                ["Varsta recomandata", product.varsta_recomandata],
                 ["Material", detail?.material],
                 ["Categorie", product.categorie],
               ].map(([label, value]) => (
@@ -203,11 +203,11 @@ export default function ProductDetails({
             <h3>Despre produs</h3>
             <p className={s.description}>
               {detailError
-                ? "Descrierea nu poate fi încărcată momentan."
+                ? "Descrierea nu poate fi incarcata momentan."
                 : detail === null
-                  ? "Se încarcă descrierea…"
+                  ? "Se incarca descrierea…"
                   : detail.descriere ||
-                    "Descrierea acestui produs nu este încă disponibilă."}
+                    "Descrierea acestui produs nu este inca disponibila."}
             </p>
           </div>
         </div>

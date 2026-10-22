@@ -13,8 +13,8 @@ test('server PDF delivery sends both recipients and preserves queue on failure',
  const originalEnv={...process.env};const originalFetch=global.fetch;
  Object.assign(process.env,{NEXT_PUBLIC_SUPABASE_URL:'https://example.supabase.co',NEXT_PUBLIC_SUPABASE_ANON_KEY:'sb_publishable_test',NEXT_PUBLIC_ACCOUNT_HARDENING_ENABLED:'false',RESEND_API_KEY:'test',NOTIFICATION_FROM:'orders@example.ro',NOTIFICATION_TO:'admin@example.ro'});
  delete process.env.AUTH_RATE_LIMIT_SECRET;
- const order={id:'test-order',code:'TLX-2026-0042',created_at:'2026-09-30T10:00:00Z',total_cents:14808,bank_iban:'RO1111111111111',bank_beneficiary:'Test SRL',company:{account:{nume_firma:'Știință SRL',email:'customer@example.ro',telefon:'123',nume_complet:'Ștefan'},billing:{}},customer_email:'customer@example.ro'};
- const lines=[{product:{id:1,nume_produs:'Jucărie',pret_engros:12.34,bucati_per_cutie:6},boxes:2}];
+ const order={id:'test-order',code:'TLX-2026-0042',created_at:'2026-09-30T10:00:00Z',total_cents:14808,bank_iban:'RO1111111111111',bank_beneficiary:'Test SRL',company:{account:{nume_firma:'Stiinta SRL',email:'customer@example.ro',telefon:'123',nume_complet:'Stefan'},billing:{}},customer_email:'customer@example.ro'};
+ const lines=[{product:{id:1,nume_produs:'Jucarie',pret_engros:12.34,bucati_per_cutie:6},boxes:2}];
  const updates=[];
  const client={from(table){const result=()=>({data:table==='b2b_orders'?order:table==='b2b_order_lines'?lines:{order_id:order.id},error:null});const chain={update(value){updates.push(value);return chain;},select(){return chain;},eq(){return chain;},is(){return chain;},or(){return chain;},async maybeSingle(){return result();},async single(){return result();},then(resolve,reject){return Promise.resolve(result()).then(resolve,reject);}};return chain;}};
  try {

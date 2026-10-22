@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return authJson(
         {
           error:
-            "Cod indisponibil sau prea multe încercări. Așteptați 10 minute înainte de a încerca din nou.",
+            "Cod indisponibil sau prea multe incercari. Asteptati 10 minute inainte de a incerca din nou.",
         },
         403,
       );
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     return authJson(
       {
         error:
-          "Recuperarea nu a fost finalizată. Codul poate fi deja consumat; reconectați-vă și verificați starea 2FA.",
+          "Recuperarea nu a fost finalizata. Codul poate fi deja consumat; reconectati-va si verificati starea 2FA.",
       },
       503,
     );

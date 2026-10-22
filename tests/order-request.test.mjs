@@ -13,7 +13,7 @@ import {
 
 const product = {
   id: 1,
-  nume_produs: "Jucărie șină",
+  nume_produs: "Jucarie sina",
   bucati_per_cutie: 12,
   pret_engros: 19.99,
   stoc_actual: 10000,
@@ -73,7 +73,7 @@ test("stored malformed, duplicate and invalid quantities are rejected", () => {
 test("uses existing account and billing fields including address override", () => {
   const account = {
     nume_firma: "Cont SRL",
-    nume_complet: "Ștefan Țurcanu",
+    nume_complet: "Stefan Turcanu",
     telefon: "0700123456",
     email: "cont@example.ro",
   };
@@ -84,22 +84,22 @@ test("uses existing account and billing fields including address override", () =
     billing_email: "facturi@example.ro",
     address_line1: "Str. Florilor 1",
     address_line2: "Etaj 2",
-    city: "Iași",
-    region: "Iași",
+    city: "Iasi",
+    region: "Iasi",
     postal_code: "700000",
-    country: "România",
-    delivery_address: "Depozit Brașov",
+    country: "Romania",
+    delivery_address: "Depozit Brasov",
   };
   const values = companyDetails(account, billing).map(([, value]) => value);
   assert.deepEqual(values, [
     "Legal SRL",
     "RO12345",
     "J40/123/2026",
-    "Str. Florilor 1, Etaj 2, Iași, Iași, 700000, România",
-    "Depozit Brașov",
+    "Str. Florilor 1, Etaj 2, Iasi, Iasi, 700000, Romania",
+    "Depozit Brasov",
     "0700123456",
     "facturi@example.ro",
-    "Ștefan Țurcanu",
+    "Stefan Turcanu",
   ]);
   const fallback = companyDetails(account, {
     address_line1: "Adresa contului",
@@ -112,15 +112,15 @@ test("uses existing account and billing fields including address override", () =
   );
 });
 test("mailto preserves Romanian text and does not inject query parameters", () => {
-  const message = emailMessage("Firma & Ștefan", [{ product, boxes: 500 }]);
+  const message = emailMessage("Firma & Stefan", [{ product, boxes: 500 }]);
   const link = new URL(mailtoLink("partener+cerere@example.ro", message));
   assert.equal(decodeURIComponent(link.pathname), "partener+cerere@example.ro");
   assert.equal(
     link.searchParams.get("subject"),
-    "Cerere de comandă ToyLogix - Firma & Ștefan",
+    "Cerere de comanda ToyLogix - Firma & Stefan",
   );
   assert.equal(link.searchParams.get("body"), message.body);
   assert.match(message.body, /Total cutii: 500/);
-  assert.match(message.body, /Voi atașa PDF-ul/);
+  assert.match(message.body, /Voi atasa PDF-ul/);
   assert.match(message.body, /exclusiv o cerere/);
 });

@@ -18,12 +18,12 @@ export default function OnlinePanel() {
         <p role="status">
           {connected
             ? `${visitors.length} sesiuni conectate`
-            : "Se conectează…"}
+            : "Se conecteaza…"}
         </p>
       </header>
       {!connected ? (
         <p className={s.empty}>
-          Lista se actualizează automat când conexiunea este disponibilă.
+          Lista se actualizeaza automat cand conexiunea este disponibila.
         </p>
       ) : visitors.length === 0 ? (
         <p className={s.empty}>Niciun vizitator conectat momentan.</p>
@@ -45,7 +45,7 @@ export default function OnlinePanel() {
         </ul>
       )}
       <footer className={s.panelFooter}>
-        Activitate în timp real · sesiuni anonime
+        Activitate in timp real · sesiuni anonime
       </footer>
     </aside>
   );

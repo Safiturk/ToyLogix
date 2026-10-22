@@ -22,8 +22,8 @@ export async function createInventoryReport(products: InventoryRow[]) {
     { header: "Nume Produs", key: "nume_produs", width: 44 },
     { header: "Categorie", key: "categorie", width: 25 },
     { header: "Brand", key: "brand", width: 24 },
-    { header: "Preț Recomandat (RON)", key: "pret_retail", width: 27 },
-    { header: "Preț En-gros B2B (RON)", key: "pret_engros", width: 27 },
+    { header: "Pret Recomandat (RON)", key: "pret_retail", width: 27 },
+    { header: "Pret En-gros B2B (RON)", key: "pret_engros", width: 27 },
     { header: "Stoc Actual", key: "stoc_actual", width: 16 },
   ];
   products.forEach((product) =>

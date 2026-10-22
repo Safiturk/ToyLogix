@@ -102,7 +102,7 @@ test("stock migration and PostgreSQL security/transaction regression", async (t)
       const rows = await query("select * from public.stock_movements order by created_at,id");
       assert.deepEqual(rows.map(row => row.quantity), [5, -9, -3]);
       for (const row of rows) {
-        assert.equal(row.reason, "Ajustare manuală din editare produs");
+        assert.equal(row.reason, "Ajustare manuala din editare produs");
         assert.equal(row.movement_type, "count_adjustment");
         assert.equal(row.created_by, admin);
       }

@@ -38,7 +38,7 @@ export async function authPost(
   };
   if (authenticated) {
     const { data } = await supabase.auth.getSession();
-    if (!data.session) throw new Error("Autentificarea este necesară.");
+    if (!data.session) throw new Error("Autentificarea este necesara.");
     headers.Authorization = `Bearer ${data.session.access_token}`;
   }
   // The pre-hardening deployment has no Next server secrets. Perform full
@@ -56,7 +56,7 @@ export async function authPost(
   });
   const data = await response.json();
   if (!response.ok)
-    throw new Error(data.error || "Operațiunea nu a fost confirmată.");
+    throw new Error(data.error || "Operatiunea nu a fost confirmata.");
   return data;
 }
 

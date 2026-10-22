@@ -20,9 +20,9 @@ const json = (body: unknown, status = 200) => Response.json(body, { status, head
 export function deletionHandler(makeBackend: (token: string) => DeletionBackend) {
   return async (request: Request): Promise<Response> => {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
-    if (request.method !== "POST") return json({ error: "Metodă nepermisă." }, 405);
+    if (request.method !== "POST") return json({ error: "Metoda nepermisa." }, 405);
     const token = request.headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
-    if (!token) return json({ error: "Autentificarea este necesară." }, 401);
+    if (!token) return json({ error: "Autentificarea este necesara." }, 401);
     if (!request.headers.get("content-type")?.includes("application/json"))
       return json({ error: "Format invalid." }, 415);
     if (Number(request.headers.get("content-length")) > 2048)
@@ -33,20 +33,20 @@ export function deletionHandler(makeBackend: (token: string) => DeletionBackend)
         return json({ error: "Cerere prea mare." }, 413);
       let body;
       try { body = JSON.parse(raw); }
-      catch { return json({ error: "Cerere invalidă." }, 400); }
+      catch { return json({ error: "Cerere invalida." }, 400); }
       if (!body || !Number.isSafeInteger(body.profileId) || body.profileId < 1)
         return json({ error: "Cont invalid." }, 400);
 
       const backend = makeBackend(token);
       const actor = await backend.user(token);
-      if (!actor?.confirmed) return json({ error: "Sesiunea a expirat. Autentificați-vă din nou." }, 401);
+      if (!actor?.confirmed) return json({ error: "Sesiunea a expirat. Autentificati-va din nou." }, 401);
       if (!await backend.isAdmin())
-        return json({ error: "Doar administratorii pot șterge conturi." }, 403);
+        return json({ error: "Doar administratorii pot sterge conturi." }, 403);
       const target = await backend.target(body.profileId);
       if (target.error) return json({ error: "Contul nu poate fi verificat." }, 503);
-      if (!target.data) return json({ error: "Contul nu mai există. Reîncărcați lista." }, 404);
+      if (!target.data) return json({ error: "Contul nu mai exista. Reincarcati lista." }, 404);
       if (target.data.auth_user_id === actor.id)
-        return json({ error: "Nu puteți șterge propriul cont." }, 403);
+        return json({ error: "Nu puteti sterge propriul cont." }, 403);
 
       const prepared = await backend.prepare(body.profileId);
       // A missing RPC is compatible ONLY with the confirmed legacy schema.
@@ -55,19 +55,19 @@ export function deletionHandler(makeBackend: (token: string) => DeletionBackend)
         prepared.error.message?.includes("public.prepare_account_deletion") &&
         await backend.legacySchema();
       if (!legacy && (prepared.error || !prepared.data))
-        return json({ error: "Contul nu poate fi șters. Verificați drepturile 2FA și istoricul asociat." }, 403);
+        return json({ error: "Contul nu poate fi sters. Verificati drepturile 2FA si istoricul asociat." }, 403);
       if (!legacy && prepared.data !== target.data.auth_user_id)
-        return json({ error: "Contul s-a modificat. Reîncărcați lista." }, 409);
+        return json({ error: "Contul s-a modificat. Reincarcati lista." }, 409);
       if (!await backend.isAdmin())
         return json({ error: "Drepturile de administrator au fost retrase." }, 403);
       const deleted = target.data.auth_user_id
         ? await backend.deleteAuth(target.data.auth_user_id)
         : legacy && await backend.deleteUnlinked(body.profileId);
       if (!deleted)
-        return json({ error: "Contul nu a fost șters. Înregistrările sau fișierele asociate pot împiedica ștergerea." }, 409);
+        return json({ error: "Contul nu a fost sters. Inregistrarile sau fisierele asociate pot impiedica stergerea." }, 409);
       return json({ ok: true });
     } catch {
-      return json({ error: "Serviciul de ștergere nu este disponibil. Încercați din nou." }, 503);
+      return json({ error: "Serviciul de stergere nu este disponibil. Incercati din nou." }, 503);
     }
   };
 }

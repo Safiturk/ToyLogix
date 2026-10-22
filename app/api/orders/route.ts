@@ -7,14 +7,14 @@ export async function POST(request: Request) {
  try {
  const {client,privileged} = await orderContext(request);
  const text = await request.text();
- if (text.length>20000) return authJson({error:'Coș prea mare.'},400);
+ if (text.length>20000) return authJson({error:'Cos prea mare.'},400);
  const body = JSON.parse(text);
- if (!Array.isArray(body.lines) || body.lines.length>100 || !/^[0-9a-f-]{36}$/i.test(body.key)) return authJson({error:'Cerere invalidă.'},400);
+ if (!Array.isArray(body.lines) || body.lines.length>100 || !/^[0-9a-f-]{36}$/i.test(body.key)) return authJson({error:'Cerere invalida.'},400);
  const {data: order,error} = await client.rpc('submit_b2b_order',{p_key:body.key,p_lines:body.lines});
  if (error) {
    if (error.code === 'PGRST202' || error.code === '42P01')
-     return authJson({error:'Serviciul de comenzi necesită actualizarea bazei de date. Contactează ToyLogix.'},503);
-   return authJson({error:'Cererea nu a fost creată. Verifică stocul și prețurile curente, apoi încearcă din nou.'},409);
+     return authJson({error:'Serviciul de comenzi necesita actualizarea bazei de date. Contacteaza ToyLogix.'},503);
+   return authJson({error:'Cererea nu a fost creata. Verifica stocul si preturile curente, apoi incearca din nou.'},409);
  }
  let notificationPending = false;
  try {

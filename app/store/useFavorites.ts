@@ -34,7 +34,7 @@ export function useFavorites(userId?: number) {
       return added;
     } catch {
       setFavoriteError(
-        "Favoritele nu pot fi salvate. Permite stocarea locală în browser.",
+        "Favoritele nu pot fi salvate. Permite stocarea locala in browser.",
       );
       return null;
     }

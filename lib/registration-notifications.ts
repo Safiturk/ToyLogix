@@ -14,8 +14,8 @@ export async function sendRegistrationNotification(item: RegistrationNotificatio
     signal: AbortSignal.timeout(8000),
     body: JSON.stringify({
       from: config.from, to: [config.to], subject: "Nou partener ToyLogix B2B",
-      text: ["Un partener și-a confirmat adresa de email. Verificați cererea în panoul de administrare.",
-        `Nume: ${item.name ?? ""}`, `Email: ${item.email}`, `Telefon: ${item.phone ?? ""}`, `Firmă: ${item.company ?? ""}`].join("\n"),
+      text: ["Un partener si-a confirmat adresa de email. Verificati cererea in panoul de administrare.",
+        `Nume: ${item.name ?? ""}`, `Email: ${item.email}`, `Telefon: ${item.phone ?? ""}`, `Firma: ${item.company ?? ""}`].join("\n"),
     }),
   });
   if (!response.ok) throw new Error("Notification provider rejected delivery");

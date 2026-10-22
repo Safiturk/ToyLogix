@@ -26,7 +26,7 @@ function PasswordToggle({
       type="button"
       className={s.passwordToggle}
       onClick={toggle}
-      aria-label={visible ? "Ascunde parola" : "Arată parola"}
+      aria-label={visible ? "Ascunde parola" : "Arata parola"}
       aria-controls={controls}
       aria-pressed={visible}
     >
@@ -79,19 +79,19 @@ export default function CustomerAuth({
     }
     if (!isRomanianPhone(telefon)) {
       setMessage(
-        "Introduceți exact 10 cifre, începând cu 0, fără +40. Exemplu: 0754654876.",
+        "Introduceti exact 10 cifre, incepand cu 0, fara +40. Exemplu: 0754654876.",
       );
       return;
     }
     if (!isEmailAddress(email.trim())) {
       setMessage(
-        "Introduceți o adresă de email validă, de exemplu nume@firma.ro.",
+        "Introduceti o adresa de email valida, de exemplu nume@firma.ro.",
       );
       return;
     }
     if (!hasPasswordComplexity(password)) {
       setMessage(
-        "Parola trebuie să conțină cel puțin o literă mare, o cifră și un semn de punctuație sau un caracter special (de exemplu !, ?, @).",
+        "Parola trebuie sa contina cel putin o litera mare, o cifra si un semn de punctuatie sau un caracter special (de exemplu !, ?, @).",
       );
       return;
     }
@@ -112,7 +112,7 @@ export default function CustomerAuth({
       setMessage(
         failure instanceof Error
           ? failure.message
-          : "Operațiunea nu a putut fi finalizată. Încercați din nou.",
+          : "Operatiunea nu a putut fi finalizata. Incercati din nou.",
       );
     } finally {
       setLoading(false);
@@ -124,58 +124,58 @@ export default function CustomerAuth({
       <section className={s.authStory}>
         <BrandLogo className={s.logo} />
         <div>
-          <span className={s.eyebrow}>PARTENERI ÎN LUMEA JOCULUI</span>
+          <span className={s.eyebrow}>PARTENERI IN LUMEA JOCULUI</span>
           <h1>
             Idei mici.
             <br />
-            Posibilități <em>mari.</em>
+            Posibilitati <em>mari.</em>
           </h1>
           <p>
-            Un catalog de descoperit. Un parteneriat de construit. Totul începe
+            Un catalog de descoperit. Un parteneriat de construit. Totul incepe
             cu ToyLogix.
           </p>
           <div className={s.authSteps}>
             <div>
               <b>01</b>
-              <span>Descoperă colecțiile de jucării</span>
+              <span>Descopera colectiile de jucarii</span>
             </div>
             <div>
               <b>02</b>
-              <span>Solicită contul de partener</span>
+              <span>Solicita contul de partener</span>
             </div>
             <div>
               <b>03</b>
-              <span>Continuă după aprobarea cererii</span>
+              <span>Continua dupa aprobarea cererii</span>
             </div>
           </div>
         </div>
-        <small>Jucării. Idei. Noi posibilități.</small>
+        <small>Jucarii. Idei. Noi posibilitati.</small>
       </section>
       <section className={s.authMain}>
         <div className={s.authForm}>
           <Link href="/store" className={s.authBack}>
-            ← Înapoi la catalog
+            ← Inapoi la catalog
           </Link>
           <span className={s.eyebrow}>
-            {register ? "UN NOU ÎNCEPUT" : "BINE AI REVENIT"}
+            {register ? "UN NOU INCEPUT" : "BINE AI REVENIT"}
           </span>
           <h2>
-            {register ? "Devino partener ToyLogix" : "Intră în contul tău"}
+            {register ? "Devino partener ToyLogix" : "Intra in contul tau"}
           </h2>
           <p className={s.authIntro}>
             {register
-              ? "Completează datele de mai jos. Echipa noastră va verifica solicitarea ta."
-              : "Folosește adresa de email și numărul de telefon cu care te-ai înregistrat."}
+              ? "Completeaza datele de mai jos. Echipa noastra va verifica solicitarea ta."
+              : "Foloseste adresa de email si numarul de telefon cu care te-ai inregistrat."}
           </p>
           {success ? (
             <div className={s.formSuccess} role="status">
-              <h3>Cererea ta a fost înregistrată.</h3>
+              <h3>Cererea ta a fost inregistrata.</h3>
               <p>
-                Contul este în curs de verificare. După confirmarea emailului
-                poți completa datele de facturare; catalogul este disponibil
-                după aprobare.{" "}
+                Contul este in curs de verificare. Dupa confirmarea emailului
+                poti completa datele de facturare; catalogul este disponibil
+                dupa aprobare.{" "}
                 {needsEmailConfirmation &&
-                  "Verifică emailul și confirmă adresa pentru a te putea autentifica."}
+                  "Verifica emailul si confirma adresa pentru a te putea autentifica."}
               </p>
               <Link href="/login" className={s.primary}>
                 Mergi la autentificare →
@@ -185,24 +185,24 @@ export default function CustomerAuth({
             <form onSubmit={submit} className={s.form} aria-busy={loading}>
               {register && (
                 <label className={s.field} htmlFor="customer-name">
-                  Nume și prenume
+                  Nume si prenume
                   <input
                     id="customer-name"
                     autoComplete="name"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Numele tău complet"
+                    placeholder="Numele tau complet"
                   />
                 </label>
               )}
               <label className={s.field} htmlFor="customer-email">
-                Adresă de email
+                Adresa de email
                 <input
                   id="customer-email"
                   type="email"
                   pattern={"[^\\s@]+@[^\\s@]+\\.[^\\s@]+"}
-                  title="Introduceți o adresă validă, de exemplu nume@firma.ro."
+                  title="Introduceti o adresa valida, de exemplu nume@firma.ro."
                   autoComplete="email"
                   required
                   value={email}
@@ -212,7 +212,7 @@ export default function CustomerAuth({
                 />
               </label>
               <label className={s.field} htmlFor="customer-phone">
-                Număr de telefon
+                Numar de telefon
                 <input
                   id="customer-phone"
                   type="tel"
@@ -220,7 +220,7 @@ export default function CustomerAuth({
                   maxLength={10}
                   minLength={10}
                   pattern="0[0-9]{9}"
-                  title="Exact 10 cifre, începând cu 0, fără +40. Exemplu: 0754654876."
+                  title="Exact 10 cifre, incepand cu 0, fara +40. Exemplu: 0754654876."
                   autoComplete="tel"
                   required
                   value={telefon}
@@ -233,13 +233,13 @@ export default function CustomerAuth({
                   aria-describedby="phone-help"
                 />
                 <small id="phone-help">
-                  Exact 10 cifre, fără +40. Exemplu: 0754654876.
+                  Exact 10 cifre, fara +40. Exemplu: 0754654876.
                 </small>
               </label>
               {register && (
                 <>
                   <div className={s.field}>
-                    <label htmlFor="customer-password">Parolă</label>
+                    <label htmlFor="customer-password">Parola</label>
                     <div className={s.passwordInput}>
                       <input
                         id="customer-password"
@@ -258,13 +258,13 @@ export default function CustomerAuth({
                       />
                     </div>
                     <small id="password-rules">
-                      Cel puțin o literă mare, o cifră și un semn de punctuație
+                      Cel putin o litera mare, o cifra si un semn de punctuatie
                       sau un caracter special (de exemplu !, ?, @).
                     </small>
                   </div>
                   <div className={s.field}>
                     <label htmlFor="customer-confirm-password">
-                      Confirmă Parola
+                      Confirma Parola
                     </label>
                     <div className={s.passwordInput}>
                       <input
@@ -279,7 +279,7 @@ export default function CustomerAuth({
                         aria-describedby={
                           passwordMismatch ? "password-mismatch" : undefined
                         }
-                        placeholder="Repetă parola"
+                        placeholder="Repeta parola"
                       />
                       <PasswordToggle
                         visible={showConfirmation}
@@ -298,7 +298,7 @@ export default function CustomerAuth({
                     )}
                   </div>
                   <label className={s.field} htmlFor="customer-company">
-                    Nume firmă <small>Opțional</small>
+                    Nume firma <small>Optional</small>
                     <input
                       id="customer-company"
                       autoComplete="organization"
@@ -308,14 +308,14 @@ export default function CustomerAuth({
                     />
                   </label>
                   <p className={s.notice}>
-                    Înregistrarea trimite o solicitare de acces. Contul devine
-                    disponibil după verificarea și aprobarea cererii.
+                    Inregistrarea trimite o solicitare de acces. Contul devine
+                    disponibil dupa verificarea si aprobarea cererii.
                   </p>
                 </>
               )}
               {!register && (
                 <label className={s.field} htmlFor="customer-password">
-                  Parolă
+                  Parola
                   <input
                     id="customer-password"
                     type="password"
@@ -334,7 +334,7 @@ export default function CustomerAuth({
               )}
               <button type="submit" className={s.primary} disabled={loading}>
                 {loading
-                  ? "Se procesează…"
+                  ? "Se proceseaza…"
                   : register
                     ? "Trimite solicitarea"
                     : "Autentificare"}{" "}
@@ -343,9 +343,9 @@ export default function CustomerAuth({
             </form>
           )}
           <p className={s.authBottom}>
-            {register ? "Ai deja un cont?" : "Nu ai încă un cont?"}{" "}
+            {register ? "Ai deja un cont?" : "Nu ai inca un cont?"}{" "}
             <Link href={register ? "/login" : "/register"}>
-              {register ? "Autentifică-te" : "Devino partener"}
+              {register ? "Autentifica-te" : "Devino partener"}
             </Link>
           </p>
         </div>

@@ -16,7 +16,7 @@ export default function ProductPicture({
     return (
       <div className={s.noImage}>
         <span aria-hidden="true">◇</span>
-        <small>Imagine indisponibilă</small>
+        <small>Imagine indisponibila</small>
       </div>
     );
   return (

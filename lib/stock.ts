@@ -64,9 +64,9 @@ export async function reverseStockMovement(
   currentStock: number,
   reason: string,
 ) {
-  if (!reason.trim()) throw new Error("Motivul stornării este obligatoriu.");
+  if (!reason.trim()) throw new Error("Motivul stornarii este obligatoriu.");
   if (movement.movement_type === "reversal" || movement.reversed_at)
-    throw new Error("Această mișcare nu poate fi stornată.");
+    throw new Error("Aceasta miscare nu poate fi stornata.");
   validateStockBalance(currentStock, -movement.quantity);
   const { data, error } = await supabase.rpc("record_stock_movement", {
     p_product_id: movement.product_id,

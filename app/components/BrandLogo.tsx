@@ -10,7 +10,7 @@ type BrandLogoProps = {
 export default function BrandLogo({
   className,
   href = "/store",
-  subtitle = "JUCĂRII & DISTRIBUȚIE B2B",
+  subtitle = "JUCARII & DISTRIBUTIE B2B",
 }: BrandLogoProps) {
   return (
     <Link href={href} className={className} aria-label="ToyLogix">

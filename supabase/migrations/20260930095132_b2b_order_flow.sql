@@ -93,7 +93,7 @@ begin
  end if;
  if p_status='payment_confirmed' then
   for line in select * from public.b2b_order_lines where order_id=p_id order by product_id loop
-   perform public.record_stock_movement(line.product_id,'stock_out',-line.boxes,'Plată confirmată: '||result.code,null,null);
+   perform public.record_stock_movement(line.product_id,'stock_out',-line.boxes,'Plata confirmata: '||result.code,null,null);
   end loop;
  end if;
  update public.b2b_orders set status=p_status,receipt_url=coalesce(p_receipt,receipt_url),updated_at=now() where id=p_id returning * into result;

@@ -22,7 +22,7 @@ export default function CustomerDetails({
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [billing, setBilling] = useState<Billing | null>(null);
-  const [message, setMessage] = useState("Se încarcă datele…");
+  const [message, setMessage] = useState("Se incarca datele…");
   useEffect(() => {
     let active = true;
     const restorePage = openDialog(dialog.current);
@@ -36,7 +36,7 @@ export default function CustomerDetails({
       if (!profile.auth_user_id) {
         if (active)
           setMessage(
-            "Contul nu este încă asociat cu un utilizator autentificat.",
+            "Contul nu este inca asociat cu un utilizator autentificat.",
           );
         return;
       }
@@ -49,13 +49,13 @@ export default function CustomerDetails({
       if (active) {
         setBilling(data as Billing | null);
         setMessage(
-          data ? "" : "Clientul nu a completat încă datele de facturare.",
+          data ? "" : "Clientul nu a completat inca datele de facturare.",
         );
       }
     })().catch(() => {
       if (active)
         setMessage(
-          "Datele nu pot fi încărcate. Verifică accesul și conexiunea.",
+          "Datele nu pot fi incarcate. Verifica accesul si conexiunea.",
         );
     });
     return () => {
@@ -76,7 +76,7 @@ export default function CustomerDetails({
       <div className={s.dialogContent}>
         <div className={s.dialogTop}>
           <h2 id="customer-details-title">{user.nume_complet}</h2>
-          <button className={s.iconButton} aria-label="Închide" onClick={close}>
+          <button className={s.iconButton} aria-label="Inchide" onClick={close}>
             ✕
           </button>
         </div>
@@ -84,12 +84,12 @@ export default function CustomerDetails({
           {[
             ["Email", user.email],
             ["Telefon", user.telefon],
-            ["Firmă", user.nume_firma],
+            ["Firma", user.nume_firma],
             ["Rol", user.rol],
             ["Status", user.status],
             ...billingFields.map(([key, label]) => [label, billing?.[key]]),
             [
-              "Plătitor de TVA",
+              "Platitor de TVA",
               billing ? (billing.vat_registered ? "Da" : "Nu") : "",
             ],
           ].map(([label, value]) => (

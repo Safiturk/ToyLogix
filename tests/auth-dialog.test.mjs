@@ -14,7 +14,7 @@ test("existing phone, email and password rules remain separate from length valid
     assert.equal(isRomanianPhone(phone), false);
   assert.equal(isEmailAddress("user@example.ro"), true);
   assert.equal(isEmailAddress("user@example"), false);
-  assert.equal(hasPasswordComplexity("Ș1!"), true);
+  assert.equal(hasPasswordComplexity("\u02181!"), true);
   for (const password of ["abc1!", "ABC!", "ABC1"])
     assert.equal(hasPasswordComplexity(password), false);
 });
@@ -32,7 +32,7 @@ test("registration errors preserve message priority and fallback code", () => {
       code: "email_exists",
       status: 429,
     }),
-    /^Există deja/,
+    /^Exista deja/,
   );
   assert.match(
     registrationErrorMessage({
@@ -48,7 +48,7 @@ test("registration errors preserve message priority and fallback code", () => {
   );
   assert.match(
     registrationErrorMessage({ message: "", code: "signup_disabled" }),
-    /^Înregistrarea/,
+    /^Inregistrarea/,
   );
   assert.match(registrationErrorMessage(null), /registration_unavailable/);
   assert.match(
